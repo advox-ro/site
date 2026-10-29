@@ -20,6 +20,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildPanel, posterior, soulUtility } from '../src/lib/panel.ts';
 import { d1, sq } from './d1.mjs';
+import { cohorts, quiz } from './pool.mjs';
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const DELETE = process.argv.includes('--delete');
@@ -28,11 +29,10 @@ const owners = []; // [owner cookie, result id] per finished quiz
 const BASE = args[0] ?? 'http://localhost:4321';
 const RUNS = Number(args[1] ?? 3);
 let cookie = '';
-const quiz = JSON.parse(readFileSync(fileURLToPath(new URL('../src/data/quiz.json', import.meta.url)), 'utf8'));
 const Q = quiz.questions;
 const AXES = quiz.axes.map((a) => a.id);
 const OPENERS = Object.keys(Q).filter((id) => Q[id].domain === 'romania-pe-scurt' && Q[id].tier === 'core' && Q[id].outlook);
-const counties = quiz.cohorts.map((k) => k.split('/'));
+const counties = cohorts.map((k) => k.split('/'));
 // The panel as the server has it: each pick's rank by information gain within the pool it was
 // drawn from (0.5 on average for random picks).
 const pfile = (p) => fileURLToPath(new URL(`../public/panel/${p}`, import.meta.url));
@@ -73,9 +73,9 @@ const NA_LABEL = new Map(Object.entries(Q).flatMap(([id, q]) => { const na = q.c
 const GENERIC_NA = new Set(['Nu știu', 'Prefer să nu spun', 'Nu pot aprecia', 'Nu am o părere formată']);
 const PROBLEM_LISTS = new Set(['romania-pe-scurt-006', 'romania-pe-scurt-025', 'romania-pe-scurt-037', 'romania-pe-scurt-038']);
 const PROFILE = Object.keys(Q).filter((id) => Q[id].profile);
-if (!PROFILE.length) console.warn('quiz.json has no profile questions (not rebuilt since the question rework: run quiz:sync); the profile rule is not checked');
+if (!PROFILE.length) console.warn('quiz.json has no profile questions (not rebuilt since the question rework: run npm run content in the redactor); the profile rule is not checked');
 const TRADEOFFS = new Set(Object.keys(Q).filter((id) => Q[id].measures === 'tradeoff'));
-if (!TRADEOFFS.size) throw new Error('quiz.json has no measures: run quiz:sync');
+if (!TRADEOFFS.size) throw new Error('quiz.json has no measures: run npm run content in the redactor');
 const ABROAD_NA = /(?<!nu )locuiesc (acum )?(în străinătate|acolo)|sau în străinătate|^nu locuiesc în românia/i;
 const HOME_NA = /^(locuiesc în românia|nu locuiesc în străinătate)/i;
 /** The questions the schedule's rules leave for a session in `county` with these answers. */

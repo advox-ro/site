@@ -1,27 +1,24 @@
 ---
-import { getCollection, render } from 'astro:content';
 import Wiki from '../../layouts/Wiki.astro';
+import { wikiPage, wikiPages } from '../../lib/redactor';
 
-export async function getStaticPaths() {
-  const pages = (await getCollection('wiki')).sort((a, b) => a.data.order - b.data.order);
-  return pages.map((page, i) => ({
-    params: { slug: page.id },
-    props: { page, prev: pages[i - 1], next: pages[i + 1] },
-  }));
-}
+// Rendered on request: the wiki comes from the redactor (lib/redactor.ts).
+export const prerender = false;
 
-const { page, prev, next } = Astro.props;
-const { Content, headings } = await render(page);
-const toc = headings.filter((h) => h.depth === 2);
+const [page, pages] = await Promise.all([wikiPage(Astro.params.slug ?? ''), wikiPages()]);
+if (!page) return new Response(null, { status: 404 });
+const i = pages.findIndex((p) => p.slug === page.slug);
+const prev = pages[i - 1], next = pages[i + 1];
+const toc = page.headings.filter((h) => h.depth === 2);
 const fmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
-const url = new URL(`/wiki/${page.id}`, Astro.site).href;
+const url = new URL(`/wiki/${page.slug}`, Astro.site).href;
 ---
 
 <Wiki
   title={`${page.data.title} — Wiki advox`}
   description={page.data.summary}
   type="article"
-  image={`/og/wiki/${page.id}.png`}
+  image={`/og/wiki/${page.slug}.png`}
   imageAlt={`${page.data.title} — Wiki advox`}
   modified={page.data.updated}
   jsonLd={[
@@ -32,7 +29,7 @@ const url = new URL(`/wiki/${page.id}`, Astro.site).href;
       description: page.data.summary,
       inLanguage: 'ro',
       dateModified: page.data.updated.toISOString(),
-      image: new URL(`/og/wiki/${page.id}.png`, Astro.site).href,
+      image: new URL(`/og/wiki/${page.slug}.png`, Astro.site).href,
       url,
       mainEntityOfPage: url,
       isPartOf: { '@type': 'WebSite', name: 'advox', url: Astro.site!.href },
@@ -96,19 +93,17 @@ const url = new URL(`/wiki/${page.id}`, Astro.site).href;
       <p class="mt-4 text-lg text-dim">{page.data.summary}</p>
       <p class="mt-2 font-mono text-[11px] tracking-[0.12em] text-faint uppercase">Actualizat {fmt.format(page.data.updated)}</p>
 
-      <div class="prose mt-10">
-        <Content />
-      </div>
+      <div class="prose mt-10" set:html={page.html} />
 
       <nav class="mt-16 grid gap-px border border-line bg-line sm:grid-cols-2" aria-label="Pagini">
         {prev ? (
-          <a href={`/wiki/${prev.id}`} class="bg-bg p-5 hover:bg-raised">
+          <a href={`/wiki/${prev.slug}`} class="bg-bg p-5 hover:bg-raised">
             <span class="font-mono text-[11px] text-faint uppercase">← Înapoi</span>
             <span class="mt-1 block font-display text-2xl font-[800] uppercase">{prev.data.title}</span>
           </a>
         ) : <span class="bg-bg" />}
         {next ? (
-          <a href={`/wiki/${next.id}`} class="bg-bg p-5 text-right hover:bg-raised">
+          <a href={`/wiki/${next.slug}`} class="bg-bg p-5 text-right hover:bg-raised">
             <span class="font-mono text-[11px] text-faint uppercase">Înainte →</span>
             <span class="mt-1 block font-display text-2xl font-[800] uppercase">{next.data.title}</span>
           </a>

@@ -55,3 +55,8 @@ export const COUNTIES: County[] = [
 
 export const countyByCode = (code: string | null | undefined) =>
   COUNTIES.find((c) => c.code === code?.toUpperCase());
+
+/** The age ranges, as stored ("18-24"; the picker shows them with an en dash). */
+export const AGES = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+/** Who can answer: every "<county>/<age>". */
+export const COHORTS = new Set(COUNTIES.flatMap((c) => AGES.map((a) => `${c.code}/${a}`)));

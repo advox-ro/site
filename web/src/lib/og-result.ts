@@ -18,19 +18,20 @@ import { advoxSvg, ADVOX_RATIO } from './advox-logo.mjs';
 
 const C_LOGO = { fg: '#121210', acc: '#d4ff3a' };
 // The advox wordmark (paper version), as an image satori places like any element.
-const LOGO_SRC = `data:image/svg+xml;base64,${btoa(advoxSvg({ colors: { ink: C_LOGO.fg, vox: C_LOGO.fg, acc: C_LOGO.acc } }))}`;
+export const LOGO_SRC = `data:image/svg+xml;base64,${btoa(advoxSvg({ colors: { ink: C_LOGO.fg, vox: C_LOGO.fg, acc: C_LOGO.acc } }))}`;
 
 export type PreviewAxis = { label: string; value: number | null }; // value null: locked
 
-const W = 1200, H = 630, PAD = 64;
-const C = { bg: '#f2efe7', fg: '#121210', dim: 'rgba(18,18,16,0.6)', faint: 'rgba(18,18,16,0.32)', line: 'rgba(18,18,16,0.14)', acc: '#d4ff3a' };
+export const W = 1200, H = 630;
+const PAD = 64;
+export const C = { bg: '#f2efe7', fg: '#121210', dim: 'rgba(18,18,16,0.6)', faint: 'rgba(18,18,16,0.32)', line: 'rgba(18,18,16,0.14)', acc: '#d4ff3a' };
 
 // Fonts arrive as data: URLs (?inline); satori wants bytes. "Ș"/"ț" live only in the latin-ext
 // subsets, and satori falls back per glyph across families, so each subset has its own name.
 const bytes = (dataUrl: string) => Uint8Array.from(atob(dataUrl.slice(dataUrl.indexOf(',') + 1)), (c) => c.charCodeAt(0)).buffer;
 type Fonts = { name: string; data: ArrayBuffer; weight: 500 | 900 }[];
 let ready: Promise<Fonts> | undefined;
-const setup = () =>
+export const setup = () =>
   (ready ??= Promise.all([
     initYoga(yogaWasm).then(initSatori),
     // Already set up (the dev server reloads this module, not resvg's) is fine.
@@ -43,11 +44,11 @@ const setup = () =>
     { name: 'Mono', data: bytes(monoLatin), weight: 500 },
     { name: 'MonoExt', data: bytes(monoExt), weight: 500 },
   ] as Fonts));
-const DISPLAY = 'Display, DisplayExt', SANS = 'Sans, SansExt', MONO = 'Mono, MonoExt';
+export const DISPLAY = 'Display, DisplayExt', SANS = 'Sans, SansExt', MONO = 'Mono, MonoExt';
 
 // Minimal element helper, so no JSX is needed.
-type Node = { type: string; props: { style: Record<string, unknown>; children: (Node | string)[] } };
-const h = (type: string, style: Record<string, unknown>, ...children: (Node | string | (Node | string)[])[]): Node => ({
+export type Node = { type: string; props: { style: Record<string, unknown>; children: (Node | string)[] } };
+export const h = (type: string, style: Record<string, unknown>, ...children: (Node | string | (Node | string)[])[]): Node => ({
   type,
   props: { style: { display: 'flex', boxSizing: 'border-box', ...style }, children: children.flat() },
 });

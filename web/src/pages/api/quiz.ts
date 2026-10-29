@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import quiz from '../../data/quiz.json';
+import { COUNTIES as ALL } from '../../data/counties';
 import { readJson } from '../../lib/http';
 import { QuizError } from '../../lib/quiz-server';
 import { allSets, questionsOf } from '../../lib/sets';
@@ -8,7 +8,7 @@ import { setVoter, voterId } from '../../lib/voter-cookie';
 
 export const prerender = false;
 
-const COUNTIES = new Set((quiz.cohorts as string[]).map((c) => c.split('/')[0]));
+const COUNTIES = new Set(ALL.map((c) => c.code));
 const questionsBy = async (slug: string) => {
   const set = (await allSets()).find((s) => s.id === slug);
   return set ? questionsOf(set) : null;

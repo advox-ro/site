@@ -1,10 +1,8 @@
 // The quizzes, published by the redactor (github.com/advox-ro/redactor, quizzes/README.md there) and
-// read from it at request time through the REDACTOR service binding: their questions resolved from
-// quiz.json or written in the quiz, their sources from the wiki page they cite. Server only.
-import { env } from 'cloudflare:workers';
-import { getEntry } from 'astro:content';
-import quiz from '../data/quiz.json';
+// read from it at request time (lib/redactor.ts): their questions resolved from the question pool or
+// written in the quiz, their sources from the wiki page they cite. Server only.
 import { countyByCode } from '../data/counties';
+import { questionPool, quizzes, wikiPage, wikiPages, type Pool } from './redactor';
 import type { QuestionData } from '../components/Question';
 
 type OwnQuestion = {
@@ -16,13 +14,15 @@ type OwnQuestion = {
   maxSelect?: number;
   scale?: { minLabel: string; maxLabel: string };
   na?: string;
-  outlook?: Record<string, number>; // evaluative questions: choice id -> -1..1 (questions/README.md)
+  outlook?: Record<string, number>; // evaluative questions: choice id -> -1..1 (the redactor's questions/README.md)
   where?: 'romania' | 'diaspora';
 };
 /** A quiz: its front matter as the redactor's quizzes/README.md describes it, and its facts as HTML. */
 export type QuestionSet = {
   id: string;
   html: string;
+  questions: SetQuestion[]; // resolved from data.questions
+
   data: {
     title: string;
     summary: string;
@@ -40,11 +40,6 @@ export type QuestionSet = {
 };
 export type SetQuestion = QuestionData & { where?: 'romania' | 'diaspora'; outlook?: Record<string, number> };
 
-const QUESTIONS = quiz.questions as Record<string, Omit<SetQuestion, 'id'>>;
-
-type Published = { slug: string; data: Record<string, unknown>; html: string };
-const redactor = () => env.REDACTOR as unknown as { quizzes(): Promise<Published[]>; photo(file: string): Promise<Response | null> };
-
 // Each Worker instance keeps the list a minute: a quiz the redactor publishes shows up within one.
 let cached: { at: number; list: QuestionSet[] } | null = null;
 const KEEP_MS = 60_000;
@@ -52,11 +47,16 @@ const KEEP_MS = 60_000;
 /** News quizzes first, newest first; then the others in their order. */
 export async function allSets(): Promise<QuestionSet[]> {
   if (cached && Date.now() - cached.at < KEEP_MS) return cached.list;
-  const list = (await redactor().quizzes()).map(({ slug, data, html }) => {
+  const published = await quizzes();
+  let pool = await questionPool();
+  const named = published.flatMap((q) => (q.data.questions as QuestionSet['data']['questions']).filter((x) => typeof x === 'string'));
+  if (named.some((id) => !pool.questions[id])) pool = await questionPool(true);
+  const list = published.map(({ slug, data, html }) => {
     const d = data as QuestionSet['data'] & { date?: string | Date };
     return {
       id: slug,
       html,
+      questions: questionsIn(slug, d.questions, pool),
       data: { ...d, date: d.date ? new Date(d.date) : undefined, image: d.image && { ...d.image, illustrative: !!d.image.illustrative }, sources: d.sources ?? [], news: d.news ?? [] },
     };
   });
@@ -66,9 +66,9 @@ export async function allSets(): Promise<QuestionSet[]> {
 }
 
 /** A quiz's photo from the redactor, by its file name, or null. */
-export const photoOf = (file: string) => redactor().photo(file);
+export { photo as photoOf } from './redactor';
 
-// The same choices quiz-sync builds for the pool (web/scripts/quiz-sync.mjs).
+// The same choices the redactor builds for the pool (scripts/pool.mjs there).
 function choicesOf(q: OwnQuestion) {
   const list =
     q.type === 'yesno'
@@ -79,31 +79,28 @@ function choicesOf(q: OwnQuestion) {
   return q.na ? [...list, { id: 'na', label: q.na }] : list;
 }
 
-export const questionsOf = (set: QuestionSet): SetQuestion[] =>
-  set.data.questions.map((q) => {
+// A pool question the pool doesn't have is left out.
+const questionsIn = (slug: string, questions: QuestionSet['data']['questions'], pool: Pool): SetQuestion[] =>
+  questions.flatMap((q) => {
     if (typeof q !== 'string') {
       const { type, text, maxSelect, scale, where, outlook } = q;
-      return { id: `${set.id}-${q.id}`, type, text, maxSelect, scale, where, outlook, choices: choicesOf(q) };
+      return [{ id: `${slug}-${q.id}`, type, text, maxSelect, scale, where, outlook, choices: choicesOf(q) }];
     }
-    const { type, text, maxSelect, scale, choices, where, outlook } = QUESTIONS[q];
-    return { id: q, type, text, maxSelect, scale, choices, where, outlook };
+    if (!pool.questions[q]) return [];
+    const { type, text, maxSelect, scale, choices, where, outlook } = pool.questions[q];
+    return [{ id: q, type, text, maxSelect, scale, choices, where, outlook }];
   });
+
+export const questionsOf = (set: QuestionSet): SetQuestion[] => set.questions;
 
 /** The quiz's sources, from the "Surse" list of its wiki page: "n. Title — Publisher. https://…". */
 export async function sourcesOf(set: QuestionSet) {
   if (!set.data.wiki) return [];
-  const page = await getEntry('wiki', set.data.wiki);
-  const list = page?.body?.split(/^## Surse\s*$/m)[1] ?? '';
-  const byNumber = new Map(
-    [...list.matchAll(/^(\d+)\. (.+)$/gm)].map(([, n, line]) => {
-      const url = line.match(/https?:\/\/\S+$/)?.[0];
-      return [Number(n), { text: url ? line.slice(0, -url.length).trim() : line, url }] as const;
-    }),
-  );
-  return set.data.sources.map((n) => ({ n, ...(byNumber.get(n) ?? { text: `Sursa ${n}`, url: undefined }) }));
+  const byNumber = new Map(((await wikiPage(set.data.wiki))?.sources ?? []).map((s) => [s.n, s]));
+  return set.data.sources.map((n) => ({ n, text: byNumber.get(n)?.text ?? `Sursa ${n}`, url: byNumber.get(n)?.url }));
 }
 
-export const wikiTitle = async (set: QuestionSet) => (set.data.wiki ? ((await getEntry('wiki', set.data.wiki))?.data.title ?? set.data.wiki) : null);
+export const wikiTitle = async (set: QuestionSet) => (set.data.wiki ? ((await wikiPages()).find((p) => p.slug === set.data.wiki)?.data.title ?? set.data.wiki) : null);
 
 const DAY = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 /** "27 oct.", for a news quiz. */

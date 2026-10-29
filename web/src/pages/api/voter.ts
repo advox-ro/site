@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import quiz from '../../data/quiz.json';
+import { COHORTS } from '../../data/counties';
 import { isHuman } from '../../lib/turnstile';
 import { ipKey, readJson } from '../../lib/http';
 import { QuizError } from '../../lib/quiz-server';
@@ -9,7 +9,6 @@ import { VOTER_COOKIE, setVoter, voterId } from '../../lib/voter-cookie';
 
 export const prerender = false;
 
-const COHORTS = new Set(quiz.cohorts as string[]); // "<county>/<age>"
 // A person can't pick a county and an age range this fast after the page loads.
 const MIN_MS_ON_PAGE = 600;
 

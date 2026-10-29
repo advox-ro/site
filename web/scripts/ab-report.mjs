@@ -20,12 +20,12 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildPanel, posterior } from '../src/lib/panel.ts';
 import { d1 } from './d1.mjs';
+import { quiz } from './pool.mjs';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const REMOTE = !process.argv.includes('--local');
 const BOOT = Number(process.argv[process.argv.indexOf('--boot') + 1]) || 2000;
 
-const quiz = JSON.parse(readFileSync(here('../src/data/quiz.json'), 'utf8'));
 const bin = readFileSync(here('../public/panel/panel.bin'));
 const panel = buildPanel(JSON.parse(readFileSync(here('../public/panel/panel.json'), 'utf8')), bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength));
 

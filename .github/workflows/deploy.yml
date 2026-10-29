@@ -35,14 +35,6 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
-      - name: Check the question pool
-        run: node ../questions/validate.mjs
-
-      - name: Check quiz.json matches questions/
-        run: |
-          npm run --silent quiz:sync > /dev/null
-          git diff --quiet -- src/data/quiz.json || { echo "::error::src/data/quiz.json is out of date: run npm run quiz:sync and commit it"; exit 1; }
-
       - name: Test the panel
         run: node --test src/lib/panel.test.ts
 
@@ -61,11 +53,3 @@ jobs:
         run: |
           npx wrangler deploy > ../wrangler.log 2>&1 || { ../.github/redact-tail.sh ../wrangler.log; exit 1; }
           grep -o 'Current Version ID: [0-9a-f-]*' ../wrangler.log || true
-
-      # The redactor (github.com/advox-ro/redactor) keeps a copy of the published quizzes, the
-      # question pool and the wiki; after a deploy it reads the changes from this repository.
-      - name: Sync the redactor
-        continue-on-error: true
-        env:
-          REDACTOR_TOKEN: ${{ secrets.REDACTOR_TOKEN }}
-        run: '[ -z "$REDACTOR_TOKEN" ] || curl -fsS -X POST -H "Authorization: Bearer $REDACTOR_TOKEN" https://redactor.advox.ro/sync'

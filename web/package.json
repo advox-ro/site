@@ -12,7 +12,6 @@
     "preview": "astro preview",
     "astro": "astro",
     "generate-types": "wrangler types",
-    "quiz:sync": "node scripts/quiz-sync.mjs",
     "db:local": "wrangler d1 migrations apply advox --local",
     "db:remote": "wrangler d1 migrations apply advox --remote"
   },
@@ -30,7 +29,6 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "satori-wasm": "npm:satori@^0.12.2",
-    "satteri": "^0.10.5",
     "tailwindcss": "^4.3.3",
     "wrangler": "^4.151.1",
     "yoga-wasm-web": "^0.3.3"

@@ -6,8 +6,6 @@ import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import cloudflare from '@astrojs/cloudflare';
 import { satteri } from '@astrojs/markdown-satteri';
-import citations from './src/lib/citations.mjs';
-import privateSections from './src/lib/private-sections.mjs';
 
 // https://astro.build/config
 export default defineConfig({
@@ -18,13 +16,14 @@ export default defineConfig({
 
   integrations: [
     react(),
-    // The quiz page is a placeholder for now; keep it out until it's real.
-    sitemap({ filter: (page) => !/\/(quiz|r)(\/|$)/.test(new URL(page).pathname) }),
+    // The built pages, without the older quiz and results. The wiki's pages are rendered on request
+    // (they come from the redactor), so they have their own sitemap (src/pages/sitemap-wiki.xml.ts).
+    sitemap({ filter: (page) => !/\/(quiz|r)(\/|$)/.test(new URL(page).pathname), customSitemaps: ['https://advox.ro/sitemap-wiki.xml'] }),
   ],
 
   markdown: {
-    // Wiki: [n] citations link to the "Surse" list. Quiz question notes stay in wiki/*.md but off the site.
-    processor: satteri({ mdastPlugins: [privateSections], hastPlugins: [citations] })
+    // The manifesto (/mission). The wiki is rendered by the redactor with the same processor.
+    processor: satteri()
   },
 
   vite: {

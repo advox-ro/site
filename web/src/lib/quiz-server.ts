@@ -1,5 +1,6 @@
-// Quiz backend: stateless. D1 stores the sessions and their answers (src/lib/store.ts); quiz.json
-// holds the questions; the browser holds a signed token for its own session.
+// Quiz backend: stateless. D1 stores the sessions and their answers (src/lib/store.ts); the question
+// pool (quiz.json, from the redactor: lib/redactor.ts) holds the questions; the browser holds a
+// signed token for its own session.
 //
 // Session flow
 //   start(county, age)  create the session (county, age, a random uuid), then ask which topics
@@ -22,9 +23,10 @@
 // by size: the full pool). Until 2026-10-21 1/16 of sessions were control (every question random)
 // and 14/16 regular (no probes); their stored arm says which (scripts/ab-report.mjs). Nothing random ever leaves the schedule's area. Results scores use every answer.
 import { env } from 'cloudflare:workers';
-import quiz from '../data/quiz.json';
 import appealScores from '../data/appeal.json';
+import { COHORTS } from '../data/counties';
 import { expectedArea, loadPanel, pick, pickByAppeal, posterior, type Appeal, type Panel, type SessionEvidence } from './panel';
+import { questionPool, type Pool, type PoolQuestion } from './redactor';
 import * as store from './store';
 import type { Expected, StoredAnswer, StoredSession } from './store';
 
@@ -35,49 +37,62 @@ const PICK = 3; // topics a session picks
 const TOKEN_TTL = 30 * 24 * 60 * 60 * 1000; // a quiz left open for days still continues where it was (until 2026-10-21: an hour)
 
 type Choice = { id: string; label: string };
-type Question = {
-  domain: string;
-  tier: 'core' | 'pool';
-  type: 'single' | 'yesno' | 'scale' | 'multi';
-  text: string;
-  maxSelect?: number;
-  scale?: { minLabel: string; maxLabel: string };
-  choices: Choice[];
-  axis: number;
-  measures?: string; // experience | satisfaction | priority | trend | tradeoff | expectation | trust | opinion
-  outlook?: Record<string, number>;
-  profile?: boolean; // a fact about you the area's other questions build on (questions/README.md)
-  group?: string; // the same question in other words: at most one per quiz
-  where?: 'romania' | 'diaspora'; // who can answer it: residents only, or the diaspora only (absent: anyone)
-};
-const QUESTIONS = quiz.questions as Record<string, Question>;
-const COHORTS = new Set(quiz.cohorts as string[]); // "<county>/<age>"
-const AXES = quiz.axes as { id: string; label: string }[];
-// The topics to pick from, in wheel order: every axis but "Viața ta".
-const TOPICS = (quiz.topics as string[]).map((id) => ({ id, label: AXES.find((a) => a.id === id)!.label }));
+type Question = PoolQuestion;
 const TOPIC_Q = 'topics'; // the token's question id while the topics are being picked
+
+// --- the pool -------------------------------------------------------------------------
+// The questions, and everything below that follows from them, are set by ready(), which every entry
+// point awaits first: the pool comes from the redactor, read once per Worker instance.
+let QUESTIONS: Record<string, Question> = {};
+let AXES: Pool['axes'] = [];
+let A = 0;
+// The topics to pick from, in wheel order: every axis but "Viața ta".
+let TOPICS: { id: string; label: string }[] = [];
 // Opening questions: the overview's core set ("how is your life going", "right direction?").
 // Scored ones only (with an outlook), so "Viața ta" has a value from the first answer.
-const OPENERS = Object.keys(QUESTIONS).filter((id) => QUESTIONS[id].domain === 'romania-pe-scurt' && QUESTIONS[id].tier === 'core' && QUESTIONS[id].outlook);
-const AXIS_BY_ID = new Map(AXES.map((a, i) => [a.id, i]));
+let OPENERS: string[] = [];
+let AXIS_BY_ID = new Map<string, number>();
+// Each question's "doesn't apply" label. After that answer, the questions with the same label don't
+// apply either ("Nu am mașină", "Nu lucrez în prezent"…); not the labels that only mean "no answer".
+let NA_LABEL = new Map<string, string>();
+// Trade-offs: what people would choose (isTradeoffStep below).
+let TRADEOFFS = new Set<string>();
+// Profile questions (education, employment, children, housing, type of locality) come before
+// anything else in their area, in pool order, so no question builds on what hasn't been asked yet.
+let PROFILE: string[] = [];
+let loaded: Pool | null = null;
+
+async function ready() {
+  const pool = await questionPool();
+  if (pool === loaded) return;
+  const ids = Object.keys(pool.questions);
+  QUESTIONS = pool.questions;
+  AXES = pool.axes;
+  A = AXES.length;
+  TOPICS = pool.topics.map((id) => ({ id, label: AXES.find((a) => a.id === id)!.label }));
+  OPENERS = ids.filter((id) => QUESTIONS[id].domain === 'romania-pe-scurt' && QUESTIONS[id].tier === 'core' && QUESTIONS[id].outlook);
+  AXIS_BY_ID = new Map(AXES.map((a, i) => [a.id, i]));
+  NA_LABEL = new Map(ids.flatMap((id) => {
+    const na = QUESTIONS[id].choices.find((c) => c.id === 'na');
+    return na ? [[id, na.label] as const] : [];
+  }));
+  TRADEOFFS = new Set(ids.filter((id) => QUESTIONS[id].measures === 'tradeoff'));
+  PROFILE = ids.filter((id) => QUESTIONS[id].profile);
+  loaded = pool;
+}
 
 // --- what the schedule never or always asks (every arm) ---------------
 // From reviewing what the picker served: whole quizzes of questions that don't apply, an opening
 // block of "what's wrong" lists, and almost no trade-offs. On the synthetic cohort these rules
 // cost no measurable accuracy (scripts/quiz-sim.mjs).
-// After a "doesn't apply" answer, the questions with the same na label don't apply either
-// ("Nu am mașină", "Nu lucrez în prezent"…). Not the labels that only mean "no answer".
-const NA_LABEL = new Map(Object.entries(QUESTIONS).flatMap(([id, q]) => {
-  const na = q.choices.find((c) => c.id === 'na');
-  return na ? [[id, na.label] as const] : [];
-}));
+// The "doesn't apply" labels that only mean "no answer" (NA_LABEL above).
 const GENERIC_NA = new Set(['Nu știu', 'Prefer să nu spun', 'Nu pot aprecia', 'Nu am o părere formată']);
 // Known from the county alone: a Diaspora session never gets the questions whose na says you live
 // abroad, a resident never the Diaspora-only ones (na "Locuiesc în România…").
 const ABROAD_NA = /(?<!nu )locuiesc (acum )?(în străinătate|acolo)|sau în străinătate|^nu locuiesc în românia/i;
 const HOME_NA = /^(locuiesc în românia|nu locuiesc în străinătate)/i;
-// Each question's `where` (questions/README.md) says it outright: "romania" for residents only,
-// "diaspora" for people abroad only; the na labels catch the rest.
+// Each question's `where` (the redactor's questions/README.md) says it outright: "romania" for
+// residents only, "diaspora" for people abroad only; the na labels catch the rest.
 const notForResidence = (abroad: boolean) => (id: string) => {
   const where = QUESTIONS[id]?.where;
   if (where) return where !== (abroad ? 'diaspora' : 'romania');
@@ -90,7 +105,6 @@ const PROBLEM_LISTS = new Set(['romania-pe-scurt-006', 'romania-pe-scurt-025', '
 // topic's third question (step 12) and every round's third is a trade-off in its area, the one that
 // people like this session would find most worth answering (by appeal; random in the control arm).
 // Three slots felt abstract to people in blind playthroughs; one, chosen by appeal, did not.
-const TRADEOFFS = new Set(Object.keys(QUESTIONS).filter((id) => QUESTIONS[id].measures === 'tradeoff'));
 const isTradeoffStep = (n: number) => n === FIRST_TOPIC + 2 * PICK;
 // At most two trust-in-institutions scales per quiz: more read as a barometer, not as being asked.
 const TRUST_CAP = 2;
@@ -123,10 +137,7 @@ const impliedNotApplying = (s: StoredSession) => [
   ...(AGE_IMPLIES[s.age] ?? []),
   ...s.answers.flatMap((a) => a.picked.flatMap((c) => IMPLIES[a.qid]?.[c] ?? [])),
 ];
-// Profile questions (education, employment, children, housing, type of locality) come before
-// anything else in their area, in pool order, so no question builds on what hasn't been asked yet.
-const PROFILE = Object.keys(QUESTIONS).filter((id) => QUESTIONS[id].profile);
-// Questions respondents read as one question in other words (questions/README.md): at most one each.
+// Questions respondents read as one question in other words (a group): at most one each.
 const groupOf = (id: string) => QUESTIONS[id]?.group;
 
 // --- tokens ---------------------------------------------------------------------------
@@ -189,6 +200,7 @@ export async function ownerOf(token: string): Promise<string | null> {
 export async function ownedFinished(token: string): Promise<{ result: string; done: number; total: number; owner: string } | null> {
   const t = token ? await verify(token, true) : null;
   if (!t || !provesOwner(t)) return null;
+  await ready();
   const s = await store.loadSession(t.s); // throws if D1 is unreachable: no answer, rather than a wrong "you have none"
   if (!s?.finished) return null;
   const { count } = axisTotals(s.answers);
@@ -357,6 +369,7 @@ function roundOf(s: StoredSession, x: number): Round {
 export async function startRound(token: string, axisId: string): Promise<Step> {
   const id = await ownerOf(token);
   if (!id) throw new QuizError('Sesiunea a expirat. Completează din nou chestionarul.');
+  await ready();
   const x = AXIS_BY_ID.get(axisId);
   const s = await store.loadSession(id);
   if (x === undefined || !s?.finished) throw new QuizError('Nu se poate.');
@@ -379,6 +392,7 @@ export class QuizError extends Error {}
 
 export async function start(county: string, age: string): Promise<Step> {
   if (!COHORTS.has(`${county}/${age}`)) throw new QuizError('Județ sau vârstă necunoscute.');
+  await ready();
   return askTopics(await store.createSession(county, age, armOf), 0);
 }
 
@@ -431,6 +445,7 @@ export async function answer(token: string, picked: string[] | null): Promise<St
   // The signature only: whether the token may still answer is for current() to say.
   const t = await verify(token, true);
   if (!t || t.o) throw new QuizError('Sesiunea a expirat. Reia chestionarul.');
+  await ready();
   const s = await store.loadSession(t.s);
   if (!s) throw new QuizError('Sesiunea a expirat. Reia chestionarul.');
   const round: Round | null = t.x !== undefined ? { x: t.x, c: t.c ?? 0, g: !!t.g, k: t.k ?? '' } : null;
@@ -480,12 +495,11 @@ export async function answer(token: string, picked: string[] | null): Promise<St
 }
 
 // --- results --------------------------------------------------------------------------
-// Each evaluative answer has an outlook in [-1, 1] (questions/README.md): how well things are
-// going, by that answer. A person's score on an axis is the mean outlook of their answers
+// Each evaluative answer has an outlook in [-1, 1] (the redactor's questions/README.md): how well
+// things are going, by that answer. A person's score on an axis is the mean outlook of their answers
 // there, shown as 0–100. The comparison lines (Romania, your county) are SQL aggregates over the
 // finished sessions (store.averages): the mean outlook of their answers per area, the same
 // quantity as yours.
-const A = AXES.length;
 const MIN_COHORT = 3; // below this many people, a cohort average says nothing
 
 /** How well things are going by this answer, -1..1: the mean outlook of the picked choices.
@@ -571,6 +585,7 @@ export async function results(session: string): Promise<Result | null> {
   if (!/^[\w-]{1,64}$/.test(session)) return null;
   const s = await store.loadSession(session).catch(() => null);
   if (!s) return null;
+  await ready();
 
   // Compared with the whole county (all ages).
   const avg = await store.averages(s.county, A);

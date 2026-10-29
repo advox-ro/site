@@ -14,7 +14,7 @@ npm run build    # build into web/dist
 
 The root `package.json` forwards `dev` and `build` to `web/`, so they also work from the repo root.
 
-`npm run build` first runs `web/scripts/build-og.mjs`, which renders the social preview images (`public/og/`: one for the site, one for the wiki, one per wiki page, from its title) and the app icons (`public/icons/`). Both folders are generated, not committed; `npm run og` regenerates them on their own.
+`npm run build` first runs `web/scripts/build-og.mjs`, which renders the social preview images for the site and the wiki index (`public/og/`) and the app icons (`public/icons/`). Each wiki page's preview is drawn on request with the same look (`web/src/pages/og/wiki/[slug].png.ts`). Both folders are generated, not committed; `npm run og` regenerates them on their own.
 
 ## Layout
 
@@ -23,7 +23,9 @@ The root `package.json` forwards `dev` and `build` to `web/`, so they also work 
 | `web/` | The site: Astro + React islands + Tailwind, deployed as a Cloudflare Worker |
 | `web/src/pages/index.astro` | Home page: the quizzes, one per screen; sends you to `/welcome` until a county and age are picked |
 | `web/src/components/Hero.tsx` | `/welcome`: headline, map, age and county pickers |
-| `web/src/lib/sets.ts`, `web/src/pages/quizzes/[file].ts` | The quizzes and their photos, read at request time from the redactor ([advox-ro/redactor](https://github.com/advox-ro/redactor)), which publishes them, through the `REDACTOR` service binding |
+| `web/src/lib/redactor.ts` | The content, read at request time from the redactor ([advox-ro/redactor](https://github.com/advox-ro/redactor)), which publishes it, through the `REDACTOR` service binding: the quizzes and their photos, the wiki and the question pool |
+| `web/src/lib/sets.ts`, `web/src/pages/quizzes/[file].ts` | The quizzes and their photos |
+| `web/src/pages/wiki/`, `web/src/pages/sitemap-wiki.xml.ts` | The wiki (`/wiki`, `/wiki/<slug>`), rendered on request, and its pages' sitemap |
 | `web/src/pages/q/` | A quiz's page (`/q/<slug>`) and its questions and results (`/q/<slug>/answer`: `SetQuiz.tsx`, `SetResults.tsx`) |
 | `web/src/lib/set-store.ts`, `web/src/pages/api/{voter,quiz,quizzes}.ts` | The quizzes' answers and counts (see below) |
 | `web/src/components/DotMap.tsx` | Canvas dot map of Romania; Diaspora is its own cluster |
@@ -32,8 +34,6 @@ The root `package.json` forwards `dev` and `build` to `web/`, so they also work 
 | `web/src/pages/quiz.astro`, `web/src/components/Quiz.tsx` | The older 20-question quiz, at `/quiz`; continues the session the start button created (step, county and age in sessionStorage) |
 | `web/src/lib/quiz-server.ts`, `web/src/lib/store.ts`, `web/src/pages/api/` | Quiz backend and its storage (see below) |
 | `web/migrations/` | The D1 database's tables |
-| `web/src/data/quiz.json` | Manifest written by `npm run quiz:sync`: questions, choices, areas, cohorts, topics |
-| `questions/` | The question pool, one JSONL file per wiki page — spec in [`questions/README.md`](questions/README.md) |
 | `web/src/styles/global.css` | Theme tokens for light and dark |
 
 ## Regenerating the map
@@ -49,7 +49,7 @@ Boundaries © EuroGeographics — the credit in the footer is required by the li
 
 ## Quiz backend
 
-The Worker is stateless; [Cloudflare D1](https://developers.cloudflare.com/d1/) stores the sessions and their answers. The database (`advox`) was created with `--jurisdiction=eu`, so it runs and keeps its data only in the European Union (the privacy page says so; a jurisdiction can only be set when a database is created). `quiz.json` is the only source of the questions. The questions are picked, and the results page's own scores computed, from a panel of synthetic personas shipped as static assets (below).
+The Worker is stateless; [Cloudflare D1](https://developers.cloudflare.com/d1/) stores the sessions and their answers. The database (`advox`) was created with `--jurisdiction=eu`, so it runs and keeps its data only in the European Union (the privacy page says so; a jurisdiction can only be set when a database is created). The questions come from the question pool (`quiz.json`: questions, choices, areas, topics), which the redactor publishes; each Worker instance reads it once. The questions are picked, and the results page's own scores computed, from a panel of synthetic personas shipped as static assets (below).
 
 - **Tables** (`web/migrations/`, read and written only through `lib/store.ts`; the quizzes' two through `lib/set-store.ts`). `sessions`: one row per session of the older quiz (id = the result id in `/r/<id>`, county, age, uuid, arm, the 3 topics in pick order, the day it was created and finished, the token of the question it waits on). `answers`: one row per question asked (the picked choice ids, none for a skip; its order in the session and the day; whether it was a probe; its area and outlook, copied from `quiz.json`), at most 120 per session. Times are kept to the day, not the moment, so an answer can't be tied to someone who said when they took the quiz. `expected`: a finished session's "you" score per open area. Several-row writes (an answer with its expected scores, finishing, deleting) are one batch, which D1 runs as a transaction.
 - **Topics.** The first question is a pick: exactly 3 of the 8 topics, stored with the session, a prior for everything after. Then come 5 general questions (an opener, then others from romania-pe-scurt), so everyone gets a broad read, then 5 from each topic, rotating in the order they were picked: 21 steps in all, the topic pick and 20 questions.
@@ -62,17 +62,18 @@ The Worker is stateless; [Cloudflare D1](https://developers.cloudflare.com/d1/) 
 - **Tokens.** The browser only ever holds an HMAC-signed token for its own session and current question. Only the token of the question the session waits on can answer, once; any other (the same request sent twice, a tab left open, an older token) gets that waiting question back, so nobody can answer more than the quiz asks. A waiting question never expires. Finishing the quiz or a round puts a separate owner token in an HttpOnly, Secure, SameSite=Lax cookie (`quiz-owner`, no end date: the server never expires it, and `/api/me` sets it again on every visit since browsers cap cookies at 400 days): it marks the result as yours for unlocking areas and deleting it, in any tab. The home page links back to it through `GET /api/me`, which answers with the result id only while that result still exists.
 
 ```sh
-npm run quiz:sync   # write src/data/quiz.json from questions/ (--preview: .cache/quiz-preview.json instead)
 npm run db:local    # create or migrate the dev server's local database (.wrangler/state)
 npx wrangler d1 execute advox --remote --command "SELECT COUNT(*) FROM sessions WHERE finished_at IS NOT NULL"
 ```
 
-Local secrets live in `web/.dev.vars` (`TOKEN_SECRET`, `TURNSTILE_SECRET`; in dev, Turnstile's test secret `1x0000000000000000000000000000000AA`); production ones are Worker secrets (`npx wrangler secret put …`). Run `quiz:sync` after changing the question pool and commit `quiz.json` with it; the deploy checks that they match.
+Local secrets live in `web/.dev.vars` (`TOKEN_SECRET`, `TURNSTILE_SECRET`; in dev, Turnstile's test secret `1x0000000000000000000000000000000AA`); production ones are Worker secrets (`npx wrangler secret put …`).
+
+The scripts that study the quiz offline (`quiz-sim.mjs`, `quiz-e2e.mjs`, `ab-report.mjs`) read the question pool from a checkout of the redactor next to this repository, after `npm run content` there (`web/scripts/pool.mjs`).
 
 ## Deployment
 
-Cloudflare Worker `advox`, serving `advox.ro` and `www.advox.ro` (custom domains in `web/wrangler.jsonc`).
+Cloudflare Worker `advox`, serving `advox.ro` and `www.advox.ro` (custom domains in `web/wrangler.jsonc`). It reads its content from the redactor's Worker (`redactor`) through the `REDACTOR` service binding, so a change there that the site needs (a new method on its `Content` entrypoint) is deployed there first.
 
 Security headers (HSTS, a report-only Content Security Policy, no framing) come from `web/public/_headers` for the static pages and `web/src/middleware.ts` for the rest.
 
-Every push to `main` deploys through GitHub Actions ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)): it validates the question pool, checks that `quiz.json` matches `questions/`, runs the panel tests, builds, applies new D1 migrations, then deploys. **Run workflow** on the Actions tab redeploys `main` by hand. It needs two repository secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Wrangler's output stays out of the public log; a failure shows only its error lines, with emails and account names blanked out.
+Every push to `main` deploys through GitHub Actions ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)): it runs the panel tests, builds, applies new D1 migrations, then deploys. **Run workflow** on the Actions tab redeploys `main` by hand. It needs two repository secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Wrangler's output stays out of the public log; a failure shows only its error lines, with emails and account names blanked out.

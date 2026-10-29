@@ -1,10 +1,10 @@
 // Renders social preview images and app icons into public/ before every build:
 //   public/og/home.png          1200×630, the landing page
 //   public/og/wiki.png          1200×630, the wiki index
-//   public/og/wiki/<slug>.png   1200×630, one per wiki page (title from its frontmatter)
 //   public/icons/*.png          apple-touch-icon and manifest icons, from favicon.svg
+// Each wiki page's preview has the same look, drawn on request (src/lib/og-wiki.ts).
 // Generated files are gitignored; `npm run build` runs this first.
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import satori from 'satori';
@@ -79,26 +79,12 @@ const wikiCard = (title, label, text = [title].flat().map((t) => (typeof t === '
     ),
   );
 
-function frontmatter(file) {
-  const m = readFileSync(file, 'utf8').match(/^---\n([\s\S]*?)\n---/);
-  const get = (k) => m?.[1].match(new RegExp(`^${k}:\\s*"?(.*?)"?\\s*$`, 'm'))?.[1];
-  return { title: get('title') };
-}
-
-mkdirSync(here('../public/og/wiki'), { recursive: true });
+mkdirSync(here('../public/og'), { recursive: true });
 mkdirSync(here('../public/icons'), { recursive: true });
 
 const mapW = 640;
 await render(home, mapSvg(W - PAD - mapW + 24, PAD - 8, mapW), here('../public/og/home.png'));
 await render(wikiCard(['România,\u00a0', hl('pe date.')], 'Wiki'), mapSvg(W - PAD - 300, PAD - 6, 300), here('../public/og/wiki.png'));
-
-const wikiDir = here('../../wiki/');
-const pages = readdirSync(wikiDir).filter((f) => /^[a-z].*\.md$/.test(f));
-for (const f of pages) {
-  const { title } = frontmatter(wikiDir + f);
-  if (!title) continue;
-  await render(wikiCard(title, 'Wiki'), mapSvg(W - PAD - 300, PAD - 6, 300), here(`../public/og/wiki/${f.replace(/\.md$/, '')}.png`));
-}
 
 // Icons from the favicon. The SVG has rounded corners; iOS rounds them itself, so fill the square there.
 const favicon = readFileSync(here('../public/favicon.svg'), 'utf8');
@@ -106,4 +92,4 @@ const square = favicon.replace(/rx="[^"]*"/, 'rx="0"');
 for (const [name, size, svg] of [['apple-touch-icon', 180, square], ['icon-192', 192, favicon], ['icon-512', 512, favicon]])
   writeFileSync(here(`../public/icons/${name}.png`), new Resvg(svg, { fitTo: { mode: 'width', value: size } }).render().asPng());
 
-console.log(`og: home, wiki, ${pages.length} wiki pages; icons: 3`);
+console.log('og: home, wiki; icons: 3');

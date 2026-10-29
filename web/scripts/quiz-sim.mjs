@@ -16,7 +16,7 @@
 //              Diaspora-only ones
 //   problems   at most one "what's wrong" list among the general questions
 //   tradeoff   step 12-14 (each topic's third question): a random trade-off in that area
-//   group      at most one question of a group (questions/README.md)
+//   group      at most one question of a group (the redactor's questions/README.md)
 //   profile    a topic's profile questions first; then scored ones until two are asked in the area
 //   live       all of the above (what quiz-server.ts does)
 // Perceived value (the soulness study, 2026-10-20):
@@ -31,6 +31,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildPanel, expectedArea, posterior } from '../src/lib/panel.ts';
 import { LIVE, loadPolicy } from './picker-policy.mjs';
+import { quiz, sources as src } from './pool.mjs';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const args = process.argv.slice(2);
@@ -44,11 +45,7 @@ const TRUSTCAP = Number(opt('--trustcap', Infinity));
 const TRADESLOTS = opt('--tradeslots', null) === null ? null : Number(opt('--tradeslots', 0));
 let seed = Number(opt('--seed', 12345));
 
-const quiz = JSON.parse(readFileSync(here('../src/data/quiz.json'), 'utf8'));
 const Q = quiz.questions;
-const src = {};
-for (const f of ['demografie-munca-diaspora', 'economie', 'educatie', 'energie-mediu-agricultura', 'infrastructura', 'justitie-administratie', 'politica', 'regiuni', 'romania-pe-scurt', 'sanatate', 'securitate-media', 'social'])
-  for (const l of readFileSync(here(`../../questions/${f}.jsonl`), 'utf8').split('\n')) if (l.trim()) { const r = JSON.parse(l); src[r.id] = r; }
 const PANEL = opt('--panel', here('../public/panel'));   // another panel export, to compare panels
 const bin = readFileSync(`${PANEL}/panel.bin`);
 const panel = buildPanel(JSON.parse(readFileSync(`${PANEL}/panel.json`, 'utf8')), bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength));

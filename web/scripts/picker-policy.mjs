@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildPanel, informationGain, pickDistribution, posterior } from '../src/lib/panel.ts';
+import { quiz, sources } from './pool.mjs';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 export const LIVE = ['residence', 'na', 'sibling', 'place', 'problems', 'tradeoff', 'group', 'profile'];
@@ -29,14 +30,11 @@ export const IMPLIES = {
   'social-007': { c: ['Nu plătesc impozit pe o locuință în România'], d: NO_BILLS },
 };
 export const AGE_IMPLIES = { '65+': ['Nu am copii la școală', 'Nu e cazul (nu am copii la școală sau nu fac meditații)'] };
-const DOMAINS = ['demografie-munca-diaspora', 'economie', 'educatie', 'energie-mediu-agricultura', 'infrastructura', 'justitie-administratie', 'politica', 'regiuni', 'romania-pe-scurt', 'sanatate', 'securitate-media', 'social'];
 
 export async function loadPolicy(o = {}) {
   const rules = new Set((o.rules ?? LIVE).flatMap((r) => (r === 'live' ? LIVE : [r])));
-  const quiz = JSON.parse(readFileSync(o.manifest ?? here('../src/data/quiz.json'), 'utf8'));
   const Q = quiz.questions;
-  const src = {};
-  for (const f of DOMAINS) for (const l of readFileSync(here(`../../questions/${f}.jsonl`), 'utf8').split('\n')) if (l.trim()) { const r = JSON.parse(l); src[r.id] = r; }
+  const src = sources;
   const dir = o.panel ?? here('../public/panel');
   const bin = readFileSync(`${dir}/panel.bin`);
   const panel = buildPanel(JSON.parse(readFileSync(`${dir}/panel.json`, 'utf8')), bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength));
