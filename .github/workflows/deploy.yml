@@ -67,5 +67,5 @@ jobs:
       - name: Sync the redactor
         continue-on-error: true
         env:
-          SYNC_TOKEN: ${{ secrets.REDACTOR_SYNC_TOKEN }}
-        run: '[ -z "$SYNC_TOKEN" ] || curl -fsS -X POST -H "Authorization: Bearer $SYNC_TOKEN" https://redactor.advox.ro/sync'
+          REDACTOR_TOKEN: ${{ secrets.REDACTOR_TOKEN }}
+        run: '[ -z "$REDACTOR_TOKEN" ] || curl -fsS -X POST -H "Authorization: Bearer $REDACTOR_TOKEN" https://redactor.advox.ro/sync'
