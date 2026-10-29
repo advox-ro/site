@@ -1,7 +1,7 @@
-// Checks the sets against the rules in sets/README.md: the schema, the question pool, the wiki,
-// the news sets' press links, photos and own questions, and duplicates (a question in two sets,
-// two sets on the same thing). Uses the site's YAML parser (web/node_modules).
-// Usage: node sets/validate.mjs
+// Checks the quizzes against the rules in quizzes/README.md: the schema, the question pool, the wiki,
+// the news quizzes' press links, photos and own questions, and duplicates (a question in two quizzes,
+// two quizzes on the same thing). Uses the site's YAML parser (web/node_modules).
+// Usage: node quizzes/validate.mjs
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -54,7 +54,7 @@ for (const f of readdirSync(root).filter((f) => /^[a-z][a-z0-9-]*\.md$/.test(f))
 
   for (const k of ['title', 'summary', 'tags', 'questions']) if (d[k] === undefined) err(f, `missing ${k}`);
   const news = d.date !== undefined;
-  if (!news && typeof d.order !== 'number') err(f, 'a set without a date needs an order');
+  if (!news && typeof d.order !== 'number') err(f, 'a quiz without a date needs an order');
   if (news && Number.isNaN(Date.parse(d.date))) err(f, `date "${d.date}" is not a date`);
   if (news && (Date.now() - Date.parse(d.date)) / 864e5 > NEWS_DAYS) warn(f, `news from ${d.date}, over ${NEWS_DAYS} days old`);
   if (d.title?.length > 32) err(f, `title over 32 characters`);
@@ -75,19 +75,19 @@ for (const f of readdirSync(root).filter((f) => /^[a-z][a-z0-9-]*\.md$/.test(f))
     for (const k of ['src', 'alt', 'credit', 'license', 'url']) if (!d.image[k]) err(f, `image needs ${k}`);
     if (d.image.src && !existsSync(join(site, 'web/public', d.image.src))) err(f, `no file web/public${d.image.src}`);
     if (d.image.license && !FREE_LICENSE.test(d.image.license)) err(f, `image licence "${d.image.license}" is not a free licence`);
-  } else if (news) err(f, 'a news set needs an image');
+  } else if (news) err(f, 'a news quiz needs an image');
 
   if (news) {
     const outlets = new Set((d.news ?? []).map((n) => n.outlet));
     for (const n of d.news ?? []) if (!n.outlet || !n.title || !/^https:\/\//.test(n.url ?? '')) err(f, `news item needs outlet, title and an https url`);
-    if (outlets.size < 2 && !(outlets.size === 1 && d.wiki && d.sources?.length)) err(f, 'a news set needs two outlets, or one and wiki sources');
+    if (outlets.size < 2 && !(outlets.size === 1 && d.wiki && d.sources?.length)) err(f, 'a news quiz needs two outlets, or one and wiki sources');
   }
 
   if (d.wiki) {
     const sources = wikiSources(d.wiki);
     if (!sources) err(f, `no wiki page wiki/${d.wiki}.md`);
     else for (const n of d.sources ?? []) if (!sources.has(n)) err(f, `source ${n} not in the Surse list of wiki/${d.wiki}.md`);
-  } else if (!news) err(f, 'a set without a date needs a wiki page');
+  } else if (!news) err(f, 'a quiz without a date needs a wiki page');
 
   const qs = d.questions ?? [];
   if (qs.length < 4 || qs.length > 8) err(f, `${qs.length} questions (4–8)`);
@@ -133,13 +133,13 @@ for (const f of readdirSync(root).filter((f) => /^[a-z][a-z0-9-]*\.md$/.test(f))
     if (p.where !== 'diaspora') home++;
     if (p.where !== 'romania') abroad++;
   }
-  // Who sees the set: residents, unless it is for the diaspora only.
+  // Who sees the quiz: residents, unless it is for the diaspora only.
   const dspOnly = d.counties?.length === 1 && d.counties[0] === 'DSP';
   if (dspOnly && abroad < 3) err(f, `only ${abroad} questions for the diaspora (at least 3)`);
   if (!dspOnly && home < 3) err(f, `only ${home} questions for residents (at least 3)`);
 }
 
-// Duplicates across sets.
+// Duplicates across quizzes.
 const owner = new Map();
 for (const s of sets)
   for (const id of (s.questions ?? []).filter((q) => typeof q === 'string')) {
@@ -165,5 +165,5 @@ for (let i = 0; i < sets.length; i++)
     if (a.stat?.label && a.stat.label === b.stat?.label) err(b.f, `same key figure as ${a.f}`);
   }
 
-console.log(`${sets.length} sets (${sets.filter((s) => s.date).length} from the news), ${owner.size} pool questions: ${errors} errors, ${warnings} warnings`);
+console.log(`${sets.length} quizzes (${sets.filter((s) => s.date).length} from the news), ${owner.size} pool questions: ${errors} errors, ${warnings} warnings`);
 process.exit(errors ? 1 : 0);

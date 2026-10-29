@@ -25,8 +25,8 @@ const manifest = defineCollection({
   }),
 });
 
-// Question sets: what the feed shows (sets/README.md). A set takes its questions from the pool
-// (ids) or writes its own (news sets), and its facts from a wiki page or from the news.
+// Quizzes: what the feed shows (quizzes/README.md). A quiz takes its questions from the pool
+// (ids) or writes its own (news quizzes), and its facts from a wiki page or from the news.
 const option = z.object({ id: z.string(), label: z.string() });
 const ownQuestion = z.object({
   id: z.string(),
@@ -40,8 +40,8 @@ const ownQuestion = z.object({
   outlook: z.record(z.string(), z.number()).optional(), // evaluative questions: choice id -> -1..1 (questions/README.md)
   where: z.enum(['romania', 'diaspora']).optional(),
 });
-const sets = defineCollection({
-  loader: glob({ pattern: '[a-z]*.md', base: '../sets' }),
+const quizzes = defineCollection({
+  loader: glob({ pattern: '[a-z]*.md', base: '../quizzes' }),
   schema: z.object({
     title: z.string(),
     summary: z.string(),
@@ -60,4 +60,4 @@ const sets = defineCollection({
   }),
 });
 
-export const collections = { wiki, manifest, sets };
+export const collections = { wiki, manifest, quizzes };

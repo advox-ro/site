@@ -6,7 +6,7 @@ order: 2
 wiki: sanatate
 stat: { value: "1.055", label: "localități aveau prea puțini medici de familie la sfârșitul lui 2025" }
 image:
-  src: /sets/la-doctor.jpg
+  src: /quizzes/la-doctor.jpg
   alt: Spitalul Colțea din București
   credit: Jorge Franganillo
   license: CC BY 2.0

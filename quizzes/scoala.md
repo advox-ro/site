@@ -6,7 +6,7 @@ order: 4
 wiki: educatie
 stat: { value: "38,5%", label: "dintre elevii de 15 ani sunt sub pragul minim la toate cele trei probe PISA 2025" }
 image:
-  src: /sets/scoala.jpg
+  src: /quizzes/scoala.jpg
   alt: Clădirea Liceului Teoretic „Mihail Kogălniceanu” din Vaslui
   credit: Ntbizib
   license: CC BY-SA 4.0

@@ -1,18 +1,18 @@
-// Question sets (sets/*.md): their questions resolved from quiz.json or written in the set, their
+// Quizzes (quizzes/*.md): their questions resolved from quiz.json or written in the quiz, their
 // sources from the wiki page they cite.
 import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
 import quiz from '../data/quiz.json';
 import { countyByCode } from '../data/counties';
 import type { QuestionData } from '../components/Question';
 
-export type QuestionSet = CollectionEntry<'sets'>;
+export type QuestionSet = CollectionEntry<'quizzes'>;
 export type SetQuestion = QuestionData & { where?: 'romania' | 'diaspora'; outlook?: Record<string, number> };
 
 const QUESTIONS = quiz.questions as Record<string, Omit<SetQuestion, 'id'>>;
 
 /** News sets first, newest first; then the others in their order. */
 export async function allSets() {
-  return (await getCollection('sets')).sort(
+  return (await getCollection('quizzes')).sort(
     (a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0) || (a.data.order ?? 0) - (b.data.order ?? 0),
   );
 }
@@ -39,7 +39,7 @@ export const questionsOf = (set: QuestionSet): SetQuestion[] =>
     return { id: q, type, text, maxSelect, scale, choices, where, outlook };
   });
 
-/** The set's sources, from the "Surse" list of its wiki page: "n. Title — Publisher. https://…". */
+/** The quiz's sources, from the "Surse" list of its wiki page: "n. Title — Publisher. https://…". */
 export async function sourcesOf(set: QuestionSet) {
   if (!set.data.wiki) return [];
   const page = await getEntry('wiki', set.data.wiki);
@@ -56,7 +56,7 @@ export async function sourcesOf(set: QuestionSet) {
 export const wikiTitle = async (set: QuestionSet) => (set.data.wiki ? ((await getEntry('wiki', set.data.wiki))?.data.title ?? set.data.wiki) : null);
 
 const DAY = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short', timeZone: 'UTC' });
-/** "27 oct.", for a news set. */
+/** "27 oct.", for a news quiz. */
 export const dayOf = (set: QuestionSet) => (set.data.date ? DAY.format(set.data.date) : null);
 
 /** "București, Ilfov +6", for a local set; DSP is the diaspora. */

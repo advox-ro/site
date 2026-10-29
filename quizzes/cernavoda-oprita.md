@@ -5,7 +5,7 @@ tags: [energie, facturi]
 date: 2026-10-27
 stat: { value: "20%", label: "din curentul țării vine, de obicei, de la Cernavodă" }
 image:
-  src: /sets/cernavoda-oprita.jpg
+  src: /quizzes/cernavoda-oprita.jpg
   alt: Clădirile reactoarelor de la Centrala Nucleară Cernavodă, în decembrie 2024
   credit: IAEA Imagebank
   license: CC BY 2.0

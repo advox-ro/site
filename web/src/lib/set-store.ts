@@ -1,4 +1,4 @@
-// The quizzes' answers (the question sets, sets/*.md): Cloudflare D1 (binding DB, restricted to the EU), tables in
+// The quizzes' answers (quizzes/*.md): Cloudflare D1 (binding DB, restricted to the EU), tables in
 // migrations/0003_quizzes.sql. Counts leave the server already rounded (approx-count.ts): a group
 // under MIN_SHOWN gets 0 and no percentages, so an exact small count is never sent. Server only.
 import { env } from 'cloudflare:workers';
@@ -9,7 +9,7 @@ import type { SetQuestion } from './sets';
  *  pct: per choice id, null under MIN_SHOWN. A multi-choice question gives each choice the share
  *  of people who picked it, so they add up to more than 100. */
 export type Tally = { n: number; pct: Record<string, number> | null };
-/** A set's answers in one group (a county, or the country). people: rounded like n. */
+/** A quiz's answers in one group (a county, or the country). people: rounded like n. */
 export type SetTally = { people: number; tallies: Record<string, Tally> };
 
 const db = () => env.DB;
@@ -49,7 +49,7 @@ export async function deleteVoter(id: string) {
   ]);
 }
 
-/** A finished set's answers, in place of any sent before. picked null: skipped. */
+/** A finished quiz's answers, in place of any sent before. picked null: skipped. */
 export async function saveSet(v: Voter, slug: string, answers: { qid: string; picked: string[] | null }[]) {
   const insert = db().prepare('INSERT INTO quiz_answers (voter_id, quiz_slug, qid, choices, county, age, answered_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
   await db().batch([
@@ -70,7 +70,7 @@ function toPercent(counts: number[]) {
   return out;
 }
 
-/** How a set was answered in a county, or in the whole country (county null). */
+/** How a quiz was answered in a county, or in the whole country (county null). */
 export async function setTally(slug: string, qs: SetQuestion[], county: string | null): Promise<SetTally> {
   const where = `quiz_slug = ?${county ? ' AND county = ?' : ''}`;
   const bind = county ? [slug, county] : [slug];
