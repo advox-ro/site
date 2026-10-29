@@ -1,0 +1,25 @@
+---
+// Shared by every page so the header never shifts between the landing page and the wiki.
+import ThemeToggle from './ThemeToggle.astro';
+import Logo from './Logo.astro';
+
+const inWiki = Astro.url.pathname.startsWith('/wiki');
+const inMission = Astro.url.pathname.startsWith('/mission');
+---
+
+<header class="mx-auto flex w-full max-w-[1440px] items-center justify-between px-4 pt-4 sm:px-8 sm:pt-6">
+  <a href="/" class="-my-1 block shrink-0"><Logo class="block h-8 w-auto min-[400px]:h-9 sm:h-10" /></a>
+  <div class="flex items-center gap-3 min-[400px]:gap-4">
+    <a
+      href="/wiki"
+      aria-current={inWiki ? 'page' : undefined}
+      class:list={['text-[13px] font-semibold tracking-[0.06em] uppercase hover:text-fg', inWiki ? 'text-fg' : 'text-dim']}
+    >Wiki</a>
+    <a
+      href="/mission"
+      aria-current={inMission ? 'page' : undefined}
+      class:list={['text-[13px] font-semibold tracking-[0.06em] uppercase hover:text-fg', inMission ? 'text-fg' : 'text-dim']}
+    >Misiunea</a>
+    <ThemeToggle />
+  </div>
+</header>

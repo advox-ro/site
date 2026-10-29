@@ -1,0 +1,30 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SiteHeader from '../../../components/SiteHeader.astro';
+import SetQuiz from '../../../components/SetQuiz';
+import { allSets, questionsOf } from '../../../lib/sets';
+
+export async function getStaticPaths() {
+  const sets = await allSets();
+  return sets.map((set, i) => ({ params: { slug: set.id }, props: { set, next: sets[(i + 1) % sets.length] } }));
+}
+
+const { set, next } = Astro.props;
+---
+
+<Base title={`${set.data.title} — advox`} noindex>
+  {/* Exactly the screen: the questions scroll inside it (SetQuiz), one screen each. */}
+  <div class="flex h-dvh flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <SiteHeader />
+    <main class="flex min-h-0 w-full flex-1 flex-col">
+      <SetQuiz
+        client:load
+        slug={set.id}
+        title={set.data.title}
+        questions={questionsOf(set)}
+        next={{ slug: next.id, title: next.data.title, summary: next.data.summary }}
+        local={!!set.data.counties}
+      />
+    </main>
+  </div>
+</Base>

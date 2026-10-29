@@ -1,0 +1,91 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import SetCover from '../../components/SetCover.astro';
+import { allSets, localLabel, questionsOf, sourcesOf, wikiTitle } from '../../lib/sets';
+import { COUNTY_TAG } from '../../lib/set-progress';
+
+export async function getStaticPaths() {
+  const sets = await allSets();
+  return sets.map((set, i) => ({ params: { slug: set.id }, props: { set, next: sets[(i + 1) % sets.length] } }));
+}
+
+const { set, next } = Astro.props;
+const { Content } = await render(set);
+const sources = await sourcesOf(set);
+const wiki = await wikiTitle(set);
+const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.where !== skip).map((q) => q.id));
+---
+
+<Base title={`${set.data.title} — advox`} description={set.data.summary}>
+  <div class="flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <SiteHeader />
+    <main class="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-8 lg:py-10">
+      <a href="/" class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg">← Înapoi</a>
+
+      <article data-set={set.id} data-page data-counties={set.data.counties && JSON.stringify(set.data.counties)} data-home={ids('diaspora')} data-abroad={ids('romania')} class="mt-4 grid gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-14">
+        <div class="max-sm:-mx-4 lg:sticky lg:top-8 lg:self-start">
+          <SetCover set={set} credit class="aspect-[4/3] lg:aspect-[4/4.2]" />
+        </div>
+
+        <div class="flex flex-col gap-6">
+          <p class="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.18em] text-dim uppercase">
+            {set.data.counties && <span data-local class="text-fg">{localLabel(set.data.counties)}</span>}
+            {set.data.tags.map((t) => (t === COUNTY_TAG ? <span data-county-tag>județul tău</span> : <span>{t}</span>))}
+            <span data-count class="text-faint">{set.data.questions.length} întrebări</span>
+          </p>
+          <h1 class="font-display text-5xl leading-[0.95] font-[850] uppercase sm:text-6xl">{set.data.title}</h1>
+          <p class="text-lg text-dim">{set.data.summary}</p>
+          <a href={`/q/${set.id}/answer`} class="press group inline-flex h-14 items-center justify-center gap-3 bg-acc px-7 font-display text-2xl font-[800] tracking-wide text-on-acc uppercase sm:self-start">
+            <span data-start-label>Răspunde</span>
+            <svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-transform duration-200 ease-out [@media(hover:hover)]:group-hover:translate-x-1"><path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>
+          </a>
+
+          <section class="border-t border-line pt-6">
+            <h2 class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{set.data.date ? 'Ce s-a întâmplat' : 'Pe scurt'}</h2>
+            <div class="prose mt-4 text-lg"><Content /></div>
+            {wiki && <a href={`/wiki/${set.data.wiki}`} class="mt-5 inline-block font-mono text-[11px] tracking-[0.18em] uppercase underline decoration-acc-fg underline-offset-4">Citește tot în wiki: {wiki} →</a>}
+          </section>
+
+          {set.data.news.length > 0 && (
+            <section class="border-t border-line pt-6">
+              <h2 class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">În presă</h2>
+              <ul class="mt-4 space-y-3">
+                {set.data.news.map((n) => (
+                  <li>
+                    <a href={n.url} rel="noopener" class="group block">
+                      <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{n.outlet}</span>
+                      <span class="mt-0.5 block leading-snug underline decoration-line underline-offset-4 group-hover:decoration-acc-fg">{n.title}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {sources.length > 0 && (
+            <section class="border-t border-line pt-6">
+              <h2 class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{set.data.date ? 'Context, din wiki' : 'Surse'}</h2>
+              <ol class="mt-4 space-y-2 text-sm text-dim">
+                {sources.map((s) => (
+                  <li>{s.url ? <a href={s.url} rel="noopener" class="underline decoration-line underline-offset-4 hover:text-fg">{s.text}</a> : s.text}</li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          <a href={`/q/${next.id}`} class="group mt-2 flex items-baseline justify-between gap-4 border-t border-line pt-6">
+            <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Următorul quiz</span>
+            <span class="font-display text-2xl font-[800] uppercase group-hover:underline">{next.data.title} →</span>
+          </a>
+        </div>
+      </article>
+    </main>
+  </div>
+</Base>
+
+<script>
+  import { wireSets } from '../../lib/set-progress';
+  wireSets();
+</script>

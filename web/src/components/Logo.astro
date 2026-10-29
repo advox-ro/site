@@ -1,0 +1,9 @@
+---
+// The advox wordmark, themed by global.css: lime selection behind "vox" on paper, lime "vox" on black.
+import { advoxSvg } from '../lib/advox-logo.mjs';
+
+interface Props { class?: string }
+const { class: cls = '' } = Astro.props;
+---
+
+<Fragment set:html={advoxSvg({ id: 'advox-logo', attrs: `class="advox ${cls}" role="img" aria-label="advox"` })} />

@@ -1,0 +1,45 @@
+{
+  "name": "advox-web",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node --no-warnings=ExperimentalWarning scripts/build-og.mjs && astro build",
+    "og": "node --no-warnings=ExperimentalWarning scripts/build-og.mjs",
+    "preview": "astro preview",
+    "astro": "astro",
+    "generate-types": "wrangler types",
+    "quiz:sync": "node scripts/quiz-sync.mjs",
+    "db:local": "wrangler d1 migrations apply advox --local",
+    "db:remote": "wrangler d1 migrations apply advox --remote"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.4.0",
+    "@astrojs/markdown-satteri": "^0.4.4",
+    "@astrojs/react": "^7.1.0",
+    "@astrojs/sitemap": "^3.7.4",
+    "@fontsource-variable/outfit": "^5.3.0",
+    "@resvg/resvg-wasm": "^2.6.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "astro": "^7.4.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "satori-wasm": "npm:satori@^0.12.2",
+    "satteri": "^0.10.5",
+    "tailwindcss": "^4.3.3",
+    "wrangler": "^4.151.1",
+    "yoga-wasm-web": "^0.3.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@fontsource/outfit": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "satori": "^0.62.0",
+    "typescript": "^6.0.3"
+  }
+}
