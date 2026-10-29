@@ -5,6 +5,9 @@ import SetCover from '../components/SetCover.astro';
 import { allSets, localLabel, questionsOf } from '../lib/sets';
 import { COUNTY_TAG } from '../lib/set-progress';
 
+// Rendered on request: the quizzes come from the redactor (lib/sets.ts).
+export const prerender = false;
+
 const sets = await allSets();
 // "din știri" (the news sets) leads the filters, then the sets' own tags.
 const NEWS = 'din știri';

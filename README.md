@@ -23,7 +23,7 @@ The root `package.json` forwards `dev` and `build` to `web/`, so they also work 
 | `web/` | The site: Astro + React islands + Tailwind, deployed as a Cloudflare Worker |
 | `web/src/pages/index.astro` | Home page: the quizzes, one per screen; sends you to `/welcome` until a county and age are picked |
 | `web/src/components/Hero.tsx` | `/welcome`: headline, map, age and county pickers |
-| `quizzes/` | The quizzes, one Markdown file each ([`quizzes/README.md`](quizzes/README.md)) |
+| `web/src/lib/sets.ts`, `web/src/pages/quizzes/[file].ts` | The quizzes and their photos, read at request time from the redactor ([advox-ro/redactor](https://github.com/advox-ro/redactor)), which publishes them, through the `REDACTOR` service binding |
 | `web/src/pages/q/` | A quiz's page (`/q/<slug>`) and its questions and results (`/q/<slug>/answer`: `SetQuiz.tsx`, `SetResults.tsx`) |
 | `web/src/lib/set-store.ts`, `web/src/pages/api/{voter,quiz,quizzes}.ts` | The quizzes' answers and counts (see below) |
 | `web/src/components/DotMap.tsx` | Canvas dot map of Romania; Diaspora is its own cluster |

@@ -1,25 +1,75 @@
-// Quizzes (quizzes/*.md): their questions resolved from quiz.json or written in the quiz, their
-// sources from the wiki page they cite.
-import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
+// The quizzes, published by the redactor (github.com/advox-ro/redactor, quizzes/README.md there) and
+// read from it at request time through the REDACTOR service binding: their questions resolved from
+// quiz.json or written in the quiz, their sources from the wiki page they cite. Server only.
+import { env } from 'cloudflare:workers';
+import { getEntry } from 'astro:content';
 import quiz from '../data/quiz.json';
 import { countyByCode } from '../data/counties';
 import type { QuestionData } from '../components/Question';
 
-export type QuestionSet = CollectionEntry<'quizzes'>;
+type OwnQuestion = {
+  id: string;
+  type: 'single' | 'multi' | 'scale' | 'yesno';
+  measures: string;
+  text: string;
+  options?: { id: string; label: string }[];
+  maxSelect?: number;
+  scale?: { minLabel: string; maxLabel: string };
+  na?: string;
+  outlook?: Record<string, number>; // evaluative questions: choice id -> -1..1 (questions/README.md)
+  where?: 'romania' | 'diaspora';
+};
+/** A quiz: its front matter as the redactor's quizzes/README.md describes it, and its facts as HTML. */
+export type QuestionSet = {
+  id: string;
+  html: string;
+  data: {
+    title: string;
+    summary: string;
+    tags: string[];
+    order?: number;
+    date?: Date; // news quizzes: the day of the news; they lead the feed
+    counties?: string[]; // local quizzes: county codes (counties.ts), DSP for the diaspora; absent: everyone
+    wiki?: string;
+    stat?: { value: string; label: string };
+    image?: { src: string; alt: string; credit: string; license: string; url: string; illustrative: boolean };
+    sources: number[];
+    news: { outlet: string; title: string; url: string }[];
+    questions: (string | OwnQuestion)[];
+  };
+};
 export type SetQuestion = QuestionData & { where?: 'romania' | 'diaspora'; outlook?: Record<string, number> };
 
 const QUESTIONS = quiz.questions as Record<string, Omit<SetQuestion, 'id'>>;
 
-/** News sets first, newest first; then the others in their order. */
-export async function allSets() {
-  return (await getCollection('quizzes')).sort(
-    (a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0) || (a.data.order ?? 0) - (b.data.order ?? 0),
-  );
+type Published = { slug: string; data: Record<string, unknown>; html: string };
+const redactor = () => env.REDACTOR as unknown as { quizzes(): Promise<Published[]>; photo(file: string): Promise<Response | null> };
+
+// Each Worker instance keeps the list a minute: a quiz the redactor publishes shows up within one.
+let cached: { at: number; list: QuestionSet[] } | null = null;
+const KEEP_MS = 60_000;
+
+/** News quizzes first, newest first; then the others in their order. */
+export async function allSets(): Promise<QuestionSet[]> {
+  if (cached && Date.now() - cached.at < KEEP_MS) return cached.list;
+  const list = (await redactor().quizzes()).map(({ slug, data, html }) => {
+    const d = data as QuestionSet['data'] & { date?: string | Date };
+    return {
+      id: slug,
+      html,
+      data: { ...d, date: d.date ? new Date(d.date) : undefined, image: d.image && { ...d.image, illustrative: !!d.image.illustrative }, sources: d.sources ?? [], news: d.news ?? [] },
+    };
+  });
+  list.sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0) || (a.data.order ?? 0) - (b.data.order ?? 0));
+  cached = { at: Date.now(), list };
+  return list;
 }
 
+/** A quiz's photo from the redactor, by its file name, or null. */
+export const photoOf = (file: string) => redactor().photo(file);
+
 // The same choices quiz-sync builds for the pool (web/scripts/quiz-sync.mjs).
-type Own = Exclude<QuestionSet['data']['questions'][number], string>;
-function choicesOf(q: Own) {
+function choicesOf(q: OwnQuestion) {
   const list =
     q.type === 'yesno'
       ? [{ id: 'da', label: 'Da' }, { id: 'nu', label: 'Nu' }]

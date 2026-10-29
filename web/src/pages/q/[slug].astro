@@ -1,18 +1,18 @@
 ---
-import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
 import SetCover from '../../components/SetCover.astro';
 import { allSets, localLabel, questionsOf, sourcesOf, wikiTitle } from '../../lib/sets';
 import { COUNTY_TAG } from '../../lib/set-progress';
 
-export async function getStaticPaths() {
-  const sets = await allSets();
-  return sets.map((set, i) => ({ params: { slug: set.id }, props: { set, next: sets[(i + 1) % sets.length] } }));
-}
+// Rendered on request: the quizzes come from the redactor (lib/sets.ts).
+export const prerender = false;
 
-const { set, next } = Astro.props;
-const { Content } = await render(set);
+const sets = await allSets();
+const i = sets.findIndex((s) => s.id === Astro.params.slug);
+if (i < 0) return new Response(null, { status: 404 });
+const set = sets[i];
+const next = sets[(i + 1) % sets.length];
 const sources = await sourcesOf(set);
 const wiki = await wikiTitle(set);
 const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.where !== skip).map((q) => q.id));
@@ -44,7 +44,7 @@ const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.wh
 
           <section class="border-t border-line pt-6">
             <h2 class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{set.data.date ? 'Ce s-a întâmplat' : 'Pe scurt'}</h2>
-            <div class="prose mt-4 text-lg"><Content /></div>
+            <div class="prose mt-4 text-lg" set:html={set.html} />
             {wiki && <a href={`/wiki/${set.data.wiki}`} class="mt-5 inline-block font-mono text-[11px] tracking-[0.18em] uppercase underline decoration-acc-fg underline-offset-4">Citește tot în wiki: {wiki} →</a>}
           </section>
 

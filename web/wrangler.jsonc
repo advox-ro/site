@@ -19,6 +19,9 @@
 	"d1_databases": [
 		{ "binding": "DB", "database_name": "advox", "database_id": "84652370-b963-422b-89fb-1a244e441ca9" }
 	],
+	// The quizzes come from the redactor (github.com/advox-ro/redactor), which publishes them: a
+	// private connection between the two Workers (src/lib/sets.ts).
+	"services": [{ "binding": "REDACTOR", "service": "redactor", "entrypoint": "Content" }],
 	// Sessions per IP per minute (see src/pages/api/session.ts). Counted per Cloudflare location.
 	"ratelimits": [
 		{ "name": "SESSION_LIMIT", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }

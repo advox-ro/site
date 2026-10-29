@@ -25,39 +25,4 @@ const manifest = defineCollection({
   }),
 });
 
-// Quizzes: what the feed shows (quizzes/README.md). A quiz takes its questions from the pool
-// (ids) or writes its own (news quizzes), and its facts from a wiki page or from the news.
-const option = z.object({ id: z.string(), label: z.string() });
-const ownQuestion = z.object({
-  id: z.string(),
-  type: z.enum(['single', 'multi', 'scale', 'yesno']),
-  measures: z.string(),
-  text: z.string(),
-  options: z.array(option).optional(),
-  maxSelect: z.number().optional(),
-  scale: z.object({ minLabel: z.string(), maxLabel: z.string() }).optional(),
-  na: z.string().optional(),
-  outlook: z.record(z.string(), z.number()).optional(), // evaluative questions: choice id -> -1..1 (questions/README.md)
-  where: z.enum(['romania', 'diaspora']).optional(),
-});
-const quizzes = defineCollection({
-  loader: glob({ pattern: '[a-z]*.md', base: '../quizzes' }),
-  schema: z.object({
-    title: z.string(),
-    summary: z.string(),
-    tags: z.array(z.string()).min(1),
-    order: z.number().optional(),
-    date: z.coerce.date().optional(), // news sets: the day of the news; they lead the feed
-    counties: z.array(z.string()).optional(), // local sets: county codes (counties.ts), DSP for the diaspora; absent: everyone
-    wiki: z.string().optional(),
-    stat: z.object({ value: z.string(), label: z.string() }).optional(),
-    image: z
-      .object({ src: z.string(), alt: z.string(), credit: z.string(), license: z.string(), url: z.string(), illustrative: z.boolean().default(false) })
-      .optional(),
-    sources: z.array(z.number()).default([]),
-    news: z.array(z.object({ outlet: z.string(), title: z.string(), url: z.string() })).default([]),
-    questions: z.array(z.union([z.string(), ownQuestion])).min(4),
-  }),
-});
-
-export const collections = { wiki, manifest, quizzes };
+export const collections = { wiki, manifest };
