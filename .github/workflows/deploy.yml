@@ -61,3 +61,11 @@ jobs:
         run: |
           npx wrangler deploy > ../wrangler.log 2>&1 || { ../.github/redact-tail.sh ../wrangler.log; exit 1; }
           grep -o 'Current Version ID: [0-9a-f-]*' ../wrangler.log || true
+
+      # The redactor (github.com/advox-ro/redactor) keeps a copy of the published quizzes, the
+      # question pool and the wiki; after a deploy it reads the changes from this repository.
+      - name: Sync the redactor
+        continue-on-error: true
+        env:
+          SYNC_TOKEN: ${{ secrets.REDACTOR_SYNC_TOKEN }}
+        run: '[ -z "$SYNC_TOKEN" ] || curl -fsS -X POST -H "Authorization: Bearer $SYNC_TOKEN" https://redactor.advox.ro/sync'
