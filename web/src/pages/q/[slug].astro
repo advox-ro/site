@@ -12,7 +12,8 @@ const sets = await allSets();
 const i = sets.findIndex((s) => s.id === Astro.params.slug);
 if (i < 0) return new Response(null, { status: 404 });
 const set = sets[i];
-const next = sets[(i + 1) % sets.length];
+// The quizzes after this one, in the feed's order: the page shows the first this reader sees.
+const following = [...sets.slice(i + 1), ...sets.slice(0, i)];
 const sources = await sourcesOf(set);
 const wiki = await wikiTitle(set);
 // One list, one look: the articles, then the wiki's sources, whose text is "Title — Publisher, date".
@@ -23,7 +24,8 @@ const allSources = [
     return cut < 0 ? { title: s.text, url: s.url } : { title: s.text.slice(0, cut), outlet: s.text.slice(cut + 3).replace(/\.$/, ''), url: s.url };
   }),
 ];
-const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.where !== skip).map((q) => q.id));
+const idsOf = (s: typeof set, skip: string) => JSON.stringify(questionsOf(s).filter((q) => q.where !== skip).map((q) => q.id));
+const ids = (skip: string) => idsOf(set, skip);
 ---
 
 <Base title={`${set.data.title} — advox`} description={set.data.summary}>
@@ -51,7 +53,7 @@ const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.wh
           </a>
 
           <section class="border-t border-line pt-6">
-            <h2 class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{set.data.date ? 'Ce s-a întâmplat' : 'Pe scurt'}</h2>
+            <h2 class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Pe scurt</h2>
             <div class="prose mt-4 text-lg" set:html={set.html} />
             {wiki && <a href={`/wiki/${set.data.wiki}`} class="mt-5 inline-block font-mono text-[11px] tracking-[0.18em] uppercase underline decoration-acc-fg underline-offset-4">Citește tot în wiki: {wiki} →</a>}
           </section>
@@ -73,10 +75,12 @@ const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.wh
             </section>
           )}
 
-          <a href={`/q/${next.id}`} class="group mt-2 flex items-baseline justify-between gap-4 border-t border-line pt-6">
-            <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Următorul quiz</span>
-            <span class="font-display text-2xl font-[800] uppercase group-hover:underline">{next.data.title} →</span>
-          </a>
+          {following.map((s) => (
+            <a hidden data-next href={`/q/${s.id}`} data-counties={s.data.counties && JSON.stringify(s.data.counties)} data-home={idsOf(s, 'diaspora')} data-abroad={idsOf(s, 'romania')} class="group mt-2 flex items-baseline justify-between gap-4 border-t border-line pt-6">
+              <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Următorul quiz</span>
+              <span class="font-display text-2xl font-[800] uppercase group-hover:underline">{s.data.title} →</span>
+            </a>
+          ))}
         </div>
       </article>
     </main>
@@ -84,6 +88,9 @@ const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.wh
 </Base>
 
 <script>
-  import { wireSets } from '../../lib/set-progress';
+  import { seen, wireSets } from '../../lib/set-progress';
   wireSets();
+  // The next quiz: the first after this one that the home page would show this reader.
+  const next = [...document.querySelectorAll<HTMLElement>('[data-next]')].find((el) => seen(el));
+  if (next) next.hidden = false;
 </script>

@@ -50,6 +50,14 @@ export function livesAbroad() {
  * for somewhere else, or with no county picked yet, and a set with fewer than 3 questions you can
  * answer. On a set's own page (data-page) it stays, so a shared link still opens.
  */
+/** Whether this browser sees a set ([data-set] or a link with the same data-*) in the feed: not a
+ *  local set for somewhere else, and at least 3 questions it can answer. */
+export function seen(el: HTMLElement, abroad = livesAbroad(), here = region()): boolean {
+  const ids: string[] = JSON.parse(el.dataset[abroad ? 'abroad' : 'home'] ?? '[]');
+  const counties: string[] | null = el.dataset.counties ? JSON.parse(el.dataset.counties) : null;
+  return !(counties && !(here && counties.includes(here))) && ids.length >= 3;
+}
+
 export function wireSets() {
   const abroad = livesAbroad();
   const here = region();
@@ -61,7 +69,7 @@ export function wireSets() {
     const ids: string[] = JSON.parse(el.dataset[abroad ? 'abroad' : 'home'] ?? '[]');
     const counties: string[] | null = el.dataset.counties ? JSON.parse(el.dataset.counties) : null;
     const elsewhere = !!counties && !(here && counties.includes(here));
-    if ((elsewhere || ids.length < 3) && !('page' in el.dataset)) {
+    if (!seen(el, abroad, here) && !('page' in el.dataset)) {
       el.hidden = true;
       continue;
     }
