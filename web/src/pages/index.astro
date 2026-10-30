@@ -1,19 +1,19 @@
 ---
 import Base from '../layouts/Base.astro';
 import SiteHeader from '../components/SiteHeader.astro';
-import SetCover from '../components/SetCover.astro';
-import { allSets, localLabel, questionsOf } from '../lib/sets';
-import { COUNTY_TAG } from '../lib/set-progress';
+import PageCover from '../components/PageCover.astro';
+import { allPages, localLabel, questionsOf } from '../lib/pages';
+import { COUNTY_TAG } from '../lib/page-progress';
 
-// Rendered on request: the quizzes come from the redactor (lib/sets.ts).
+// Rendered on request: the pages come from the redactor (lib/pages.ts).
 export const prerender = false;
 
-const sets = await allSets();
-// "din știri" (the news sets) leads the filters, then the sets' own tags.
+const pages = await allPages();
+// "din știri" (the news pages) leads the filters, then the pages' own tags.
 const NEWS = 'din știri';
-const tagsOf = (s: (typeof sets)[number]) => (s.data.date ? [NEWS, ...s.data.tags] : s.data.tags);
-const tags = [...new Set(sets.flatMap(tagsOf))];
-const ids = (s: (typeof sets)[number], skip: string) => JSON.stringify(questionsOf(s).filter((q) => q.where !== skip).map((q) => q.id));
+const tagsOf = (s: (typeof pages)[number]) => (s.data.date ? [NEWS, ...s.data.tags] : s.data.tags);
+const tags = [...new Set(pages.flatMap(tagsOf))];
+const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(questionsOf(s).filter((q) => q.where !== skip).map((q) => q.id));
 const arrow = '<svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-transform duration-200 ease-out [@media(hover:hover)]:group-hover:translate-x-1"><path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>';
 ---
 
@@ -40,49 +40,49 @@ const arrow = '<svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-tra
     <SiteHeader />
 
     {/* Where you said you live, and the tags to filter by. */}
-    <div class="mx-auto mt-3 flex w-full max-w-[1440px] items-center gap-4 px-4 sm:mt-5 sm:px-8">
+    <div class="mx-auto mt-3 flex w-full max-w-[1440px] items-center gap-4 px-4 wide:mt-5 wide:px-8">
       <a href="/welcome" id="where" class="shrink-0 font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg">Alege județul</a>
-      <div class="-mr-4 flex min-w-0 gap-2 overflow-x-auto pr-4 [scrollbar-width:none] sm:mr-0 sm:pr-0" role="group" aria-label="Filtrează după temă">
+      <div class="-mr-4 flex min-w-0 gap-2 overflow-x-auto pr-4 [scrollbar-width:none] wide:mr-0 wide:pr-0" role="group" aria-label="Filtrează după temă">
         <button data-tag="" aria-pressed="true" class="tag-chip">Toate</button>
         {tags.map((t) => <button data-tag={t} aria-pressed="false" class="tag-chip" data-county-tag={t === COUNTY_TAG ? '' : undefined}>{t === COUNTY_TAG ? 'județul tău' : t}</button>)}
       </div>
     </div>
 
-    {/* The feed: one set per screen, snapping like a reel. On phones a card fills the feed edge to edge
+    {/* The feed: one page per screen, snapping like a reel. On phones a card fills the feed edge to edge
         (100cqh: the feed's height). */}
-    <main id="feed" class="mt-3 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain [container-type:size] sm:mt-5">
-      <div class="mx-auto flex w-full max-w-[1440px] flex-col sm:px-8">
-        {sets.map((set) => {
-          const url = `/q/${set.id}`;
+    <main id="feed" class="mt-3 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain [container-type:size] wide:mt-5">
+      <div class="mx-auto flex w-full max-w-[1440px] flex-col wide:px-8">
+        {pages.map((page) => {
+          const url = `/p/${page.id}`;
           return (
             <article
-              data-set={set.id}
-              data-home={ids(set, 'diaspora')}
-              data-abroad={ids(set, 'romania')}
-              data-tags={JSON.stringify(tagsOf(set))}
-              data-counties={set.data.counties && JSON.stringify(set.data.counties)}
-              class="set-card h-[100cqh] min-h-[30rem] snap-start snap-always sm:h-[calc(100dvh-9rem)] sm:pb-6 wide:pb-8"
+              data-page={page.id}
+              data-home={ids(page, 'diaspora')}
+              data-abroad={ids(page, 'romania')}
+              data-tags={JSON.stringify(tagsOf(page))}
+              data-counties={page.data.counties && JSON.stringify(page.data.counties)}
+              class="page-card h-[100cqh] min-h-[30rem] snap-start snap-always wide:h-[calc(100dvh-9rem)] wide:pb-8"
             >
-              {/* The card: the cover on top (on the left on wide screens), the set's text and buttons under it. */}
-              <div class="grid h-full grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-raised sm:rounded-2xl sm:border sm:border-line wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] wide:grid-rows-1">
-              <a href={url} tabindex="-1" class="block min-h-0"><SetCover set={set} class="h-full" /></a>
-              <div class="flex flex-col justify-end gap-4 p-5 sm:p-6 wide:p-8">
+              {/* The card: the cover on top (on the left on wide screens), the page's text and buttons under it. */}
+              <div class:list={["grid h-full grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-raised wide:rounded-2xl wide:border wide:border-line wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] wide:grid-rows-1", page.data.image && "feed-photo"]}>
+              <a href={url} tabindex="-1" class="feed-cover block min-h-0"><PageCover page={page} class="h-full" /></a>
+              <div class="feed-text flex flex-col justify-end gap-4 p-5 wide:p-8">
                 <p class="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.18em] text-dim uppercase">
-                  {set.data.counties && <span data-local class="text-fg">{localLabel(set.data.counties)}</span>}
-                  {set.data.tags.map((t) => (t === COUNTY_TAG ? <span data-county-tag>județul tău</span> : <span>{t}</span>))}
-                  <span data-count class="text-faint">{set.data.questions.length} întrebări</span>
+                  {page.data.counties && <span data-local class="text-fg">{localLabel(page.data.counties)}</span>}
+                  {page.data.tags.map((t) => (t === COUNTY_TAG ? <span data-county-tag>județul tău</span> : <span>{t}</span>))}
+                  <span data-count class="text-faint">{page.data.questions.length} întrebări</span>
                 </p>
-                <h2 class="font-display text-4xl leading-[0.95] font-[850] uppercase sm:text-5xl xl:text-6xl"><a href={url} class="hover:underline decoration-acc-fg decoration-4 underline-offset-6">{set.data.title}</a></h2>
-                <p class="max-w-[52ch] text-base text-dim sm:text-lg">{set.data.summary}</p>
-                {/* How many finished it, filled in by wireSets; hidden while under the minimum shown. */}
+                <h2 class="font-display text-4xl leading-[0.95] font-[850] uppercase wide:text-5xl wide-xl:text-6xl"><a href={url} class="hover:underline decoration-acc-fg decoration-4 underline-offset-6">{page.data.title}</a></h2>
+                <p class="max-w-[52ch] text-base text-dim wide:text-lg">{page.data.summary}</p>
+                {/* How many finished it, filled in by wirePages; hidden while under the minimum shown. */}
                 <p data-people-line hidden class="text-sm text-dim">
                   Au răspuns <strong data-people class="font-semibold text-fg"></strong>{' '}<span data-people-where></span>.
                 </p>
                 {/* One row, the answer button on the right; compact where the column is narrow (phones, and the
                     two-column layout below xl). */}
                 <div class="mt-1 flex gap-2">
-                  <a href={url} class="press inline-flex h-14 items-center justify-center border border-line px-3 font-display text-sm font-[700] tracking-wide whitespace-nowrap uppercase hover:border-faint sm:px-5 sm:text-lg wide:px-3 wide:text-sm wide-xl:px-5 wide-xl:text-lg">Vezi mai mult</a>
-                  <a href={`${url}/answer`} class="press group inline-flex h-14 flex-1 items-center justify-center gap-2.5 bg-acc px-4 font-display text-xl font-[800] tracking-wide whitespace-nowrap text-on-acc uppercase sm:flex-none sm:gap-3 sm:px-7 sm:text-2xl wide:flex-1 wide:gap-2.5 wide:px-4 wide:text-xl wide-xl:flex-none wide-xl:gap-3 wide-xl:px-7 wide-xl:text-2xl">
+                  <a href={url} class="press inline-flex h-14 items-center justify-center border border-line px-3 font-display text-sm font-[700] tracking-wide whitespace-nowrap uppercase hover:border-faint wide-xl:px-5 wide-xl:text-lg">Vezi mai mult</a>
+                  <a href={`${url}/answer`} class="press group inline-flex h-14 flex-1 items-center justify-center gap-2.5 bg-acc px-4 font-display text-xl font-[800] tracking-wide whitespace-nowrap text-on-acc uppercase wide-xl:flex-none wide-xl:gap-3 wide-xl:px-7 wide-xl:text-2xl">
                     <span data-start-label>Răspunde</span><Fragment set:html={arrow} />
                   </a>
                 </div>
@@ -91,17 +91,17 @@ const arrow = '<svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-tra
             </article>
           );
         })}
-        <p class="snap-end pt-6 pb-10 sm:pt-0 text-center font-mono text-[11px] tracking-[0.18em] text-faint uppercase">Ai ajuns la capăt</p>
+        <p class="snap-end pt-6 pb-10 wide:pt-0 text-center font-mono text-[11px] tracking-[0.18em] text-faint uppercase">Ai ajuns la capăt</p>
       </div>
     </main>
   </div>
 </Base>
 
 <script>
-  import { wireSets, showPeople, COUNTY_KEY, AGE_KEY } from '../lib/set-progress';
+  import { wirePages, showPeople, COUNTY_KEY, AGE_KEY } from '../lib/page-progress';
   import { countyByCode } from '../data/counties';
 
-  wireSets();
+  wirePages();
   showPeople();
 
   try {
@@ -116,7 +116,7 @@ const arrow = '<svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-tra
     chip.addEventListener('click', () => {
       const tag = chip.dataset.tag;
       chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
-      for (const card of document.querySelectorAll<HTMLElement>('.set-card'))
+      for (const card of document.querySelectorAll<HTMLElement>('.page-card'))
         card.classList.toggle('hidden', !!tag && !JSON.parse(card.dataset.tags!).includes(tag));
       document.getElementById('feed')!.scrollTo({ top: 0 });
     });

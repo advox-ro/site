@@ -1,8 +1,8 @@
-// The quizzes, published by the redactor (github.com/advox-ro/redactor, quizzes/README.md there) and
+// The pages, published by the redactor (github.com/advox-ro/redactor, pages/README.md there) and
 // read from it at request time (lib/redactor.ts): their questions resolved from the question pool or
-// written in the quiz, their sources from the wiki page they cite. Server only.
+// written in the page, their sources from the wiki page they cite. Server only.
 import { countyByCode } from '../data/counties';
-import { questionPool, quizzes, wikiPage, wikiPages, type Pool } from './redactor';
+import { publishedPages, questionPool, wikiPage, wikiPages, type Pool } from './redactor';
 import type { QuestionData } from '../components/Question';
 
 type OwnQuestion = {
@@ -17,19 +17,19 @@ type OwnQuestion = {
   outlook?: Record<string, number>; // evaluative questions: choice id -> -1..1 (the redactor's questions/README.md)
   where?: 'romania' | 'diaspora';
 };
-/** A quiz: its front matter as the redactor's quizzes/README.md describes it, and its facts as HTML. */
-export type QuestionSet = {
+/** A page: its front matter as the redactor's pages/README.md describes it, and its facts as HTML. */
+export type Page = {
   id: string;
   html: string;
-  questions: SetQuestion[]; // resolved from data.questions
+  questions: PageQuestion[]; // resolved from data.questions
 
   data: {
     title: string;
     summary: string;
     tags: string[];
     order?: number;
-    date?: Date; // news quizzes: the day of the news; they lead the feed
-    counties?: string[]; // local quizzes: county codes (counties.ts), DSP for the diaspora; absent: everyone
+    date?: Date; // news pages: the day of the news; they lead the feed
+    counties?: string[]; // local pages: county codes (counties.ts), DSP for the diaspora; absent: everyone
     wiki?: string;
     stat?: { value: string; label: string };
     image?: { src: string; alt: string; credit: string; license: string; url: string; illustrative: boolean };
@@ -38,21 +38,21 @@ export type QuestionSet = {
     questions: (string | OwnQuestion)[];
   };
 };
-export type SetQuestion = QuestionData & { where?: 'romania' | 'diaspora'; outlook?: Record<string, number> };
+export type PageQuestion = QuestionData & { where?: 'romania' | 'diaspora'; outlook?: Record<string, number> };
 
-// Each Worker instance keeps the list a minute: a quiz the redactor publishes shows up within one.
-let cached: { at: number; list: QuestionSet[] } | null = null;
+// Each Worker instance keeps the list a minute: a page the redactor publishes shows up within one.
+let cached: { at: number; list: Page[] } | null = null;
 const KEEP_MS = 60_000;
 
-/** News quizzes first, newest first; then the others in their order. */
-export async function allSets(): Promise<QuestionSet[]> {
+/** News pages first, newest first; then the others in their order. */
+export async function allPages(): Promise<Page[]> {
   if (cached && Date.now() - cached.at < KEEP_MS) return cached.list;
-  const published = await quizzes();
+  const published = await publishedPages();
   let pool = await questionPool();
-  const named = published.flatMap((q) => (q.data.questions as QuestionSet['data']['questions']).filter((x) => typeof x === 'string'));
+  const named = published.flatMap((q) => (q.data.questions as Page['data']['questions']).filter((x) => typeof x === 'string'));
   if (named.some((id) => !pool.questions[id])) pool = await questionPool(true);
   const list = published.map(({ slug, data, html }) => {
-    const d = data as QuestionSet['data'] & { date?: string | Date };
+    const d = data as Page['data'] & { date?: string | Date };
     return {
       id: slug,
       html,
@@ -65,7 +65,7 @@ export async function allSets(): Promise<QuestionSet[]> {
   return list;
 }
 
-/** A quiz's photo from the redactor, by its file name, or null. */
+/** A page's photo from the redactor, by its file name, or null. */
 export { photo as photoOf } from './redactor';
 
 // The same choices the redactor builds for the pool (scripts/pool.mjs there).
@@ -80,7 +80,7 @@ function choicesOf(q: OwnQuestion) {
 }
 
 // A pool question the pool doesn't have is left out.
-const questionsIn = (slug: string, questions: QuestionSet['data']['questions'], pool: Pool): SetQuestion[] =>
+const questionsIn = (slug: string, questions: Page['data']['questions'], pool: Pool): PageQuestion[] =>
   questions.flatMap((q) => {
     if (typeof q !== 'string') {
       const { type, text, maxSelect, scale, where, outlook } = q;
@@ -91,22 +91,22 @@ const questionsIn = (slug: string, questions: QuestionSet['data']['questions'], 
     return [{ id: q, type, text, maxSelect, scale, choices, where, outlook }];
   });
 
-export const questionsOf = (set: QuestionSet): SetQuestion[] => set.questions;
+export const questionsOf = (page: Page): PageQuestion[] => page.questions;
 
-/** The quiz's sources, from the "Surse" list of its wiki page: "n. Title — Publisher. https://…". */
-export async function sourcesOf(set: QuestionSet) {
-  if (!set.data.wiki) return [];
-  const byNumber = new Map(((await wikiPage(set.data.wiki))?.sources ?? []).map((s) => [s.n, s]));
-  return set.data.sources.map((n) => ({ n, text: byNumber.get(n)?.text ?? `Sursa ${n}`, url: byNumber.get(n)?.url }));
+/** The page's sources, from the "Surse" list of its wiki page: "n. Title — Publisher. https://…". */
+export async function sourcesOf(page: Page) {
+  if (!page.data.wiki) return [];
+  const byNumber = new Map(((await wikiPage(page.data.wiki))?.sources ?? []).map((s) => [s.n, s]));
+  return page.data.sources.map((n) => ({ n, text: byNumber.get(n)?.text ?? `Sursa ${n}`, url: byNumber.get(n)?.url }));
 }
 
-export const wikiTitle = async (set: QuestionSet) => (set.data.wiki ? ((await wikiPages()).find((p) => p.slug === set.data.wiki)?.data.title ?? set.data.wiki) : null);
+export const wikiTitle = async (page: Page) => (page.data.wiki ? ((await wikiPages()).find((p) => p.slug === page.data.wiki)?.data.title ?? page.data.wiki) : null);
 
 const DAY = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short', timeZone: 'UTC' });
-/** "27 oct.", for a news quiz. */
-export const dayOf = (set: QuestionSet) => (set.data.date ? DAY.format(set.data.date) : null);
+/** "27 oct.", for a news page. */
+export const dayOf = (page: Page) => (page.data.date ? DAY.format(page.data.date) : null);
 
-/** "București, Ilfov +6", for a local set; DSP is the diaspora. */
+/** "București, Ilfov +6", for a local page; DSP is the diaspora. */
 export function localLabel(codes: string[]) {
   const names = codes.map((c) => (c === 'DSP' ? 'Diaspora' : (countyByCode(c)?.name ?? c)));
   return names.length <= 2 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2}`;

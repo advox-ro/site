@@ -4,7 +4,7 @@ import { COHORTS } from '../../data/counties';
 import { isHuman } from '../../lib/turnstile';
 import { ipKey, readJson } from '../../lib/http';
 import { QuizError } from '../../lib/quiz-server';
-import { deleteVoter, saveVoter } from '../../lib/set-store';
+import { deleteVoter, saveVoter } from '../../lib/page-store';
 import { VOTER_COOKIE, setVoter, voterId } from '../../lib/voter-cookie';
 
 export const prerender = false;
@@ -41,7 +41,7 @@ export const POST: APIRoute = async ({ request, cookies, url }) => {
   }
 };
 
-// DELETE -> { ok }: deletes this browser's voter and every quiz answer it sent (from /privacy).
+// DELETE -> { ok }: deletes this browser's voter and every page answer it sent (from /privacy).
 export const DELETE: APIRoute = async ({ cookies }) => {
   try {
     const id = voterId(cookies);

@@ -1,9 +1,9 @@
 // The content, published by the redactor (github.com/advox-ro/redactor) and read from it at request
-// time through the REDACTOR service binding (wrangler.jsonc): the quizzes and their photos, the wiki
+// time through the REDACTOR service binding (wrangler.jsonc): the pages and their photos, the wiki
 // and the question pool. Server only.
 import { env } from 'cloudflare:workers';
 
-/** A quiz as the redactor publishes it: its front matter and its facts as HTML. */
+/** A page as the redactor publishes it: its front matter and its facts as HTML. */
 export type Published = { slug: string; data: Record<string, unknown>; html: string };
 
 export type WikiEntry = { slug: string; data: { title: string; summary: string; updated: Date; order: number } };
@@ -35,7 +35,7 @@ export type Pool = { axes: { id: string; label: string }[]; questions: Record<st
 
 type Entry<T> = Omit<T, 'data'> & { data: Omit<WikiEntry['data'], 'updated'> & { updated: string } };
 type Content = {
-  quizzes(): Promise<Published[]>;
+  pages(): Promise<Published[]>;
   photo(file: string): Promise<Response | null>;
   wiki(): Promise<Entry<WikiEntry>[]>;
   wikiPage(slug: string): Promise<Entry<WikiPage> | null>;
@@ -43,9 +43,9 @@ type Content = {
 };
 const redactor = () => env.REDACTOR as unknown as Content;
 
-export const quizzes = () => redactor().quizzes();
+export const publishedPages = () => redactor().pages();
 
-/** A quiz's photo, by its file name, or null. */
+/** A page's photo, by its file name, or null. */
 export const photo = (file: string) => redactor().photo(file);
 
 const dated = <T extends Entry<WikiEntry>>(p: T) => ({ ...p, data: { ...p.data, updated: new Date(p.data.updated) } });
@@ -60,7 +60,7 @@ export async function wikiPage(slug: string): Promise<WikiPage | null> {
 }
 
 // The pool changes only when the redactor deploys: each Worker instance reads it once, and again
-// when asked for a question it doesn't have (a quiz published since, with new pool questions).
+// when asked for a question it doesn't have (a page published since, with new pool questions).
 let pool: Promise<Pool> | null = null;
 /** The question pool; `fresh` reads it again. */
 export function questionPool(fresh = false): Promise<Pool> {

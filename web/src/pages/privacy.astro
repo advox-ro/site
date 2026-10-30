@@ -76,7 +76,7 @@ import Wiki from '../layouts/Wiki.astro';
 </Wiki>
 
 <script>
-  import { AGE_KEY, COUNTY_KEY, setKey } from '../lib/set-progress';
+  import { AGE_KEY, COUNTY_KEY, pageKey } from '../lib/page-progress';
 
   const button = document.getElementById('delete-sets') as HTMLButtonElement;
   const done = document.getElementById('delete-sets-done')!;
@@ -87,7 +87,7 @@ import Wiki from '../layouts/Wiki.astro';
       const res = await fetch('/api/voter', { method: 'DELETE' });
       if (!res.ok) throw new Error();
       // The copy in this browser goes too, county and age included: the next quiz starts from /welcome.
-      for (const k of Object.keys(localStorage)) if (k.startsWith(setKey(''))) localStorage.removeItem(k);
+      for (const k of Object.keys(localStorage)) if (k.startsWith(pageKey(''))) localStorage.removeItem(k);
       localStorage.removeItem(COUNTY_KEY);
       localStorage.removeItem(AGE_KEY);
       done.textContent = 'Șterse.';

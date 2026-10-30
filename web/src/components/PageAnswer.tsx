@@ -1,26 +1,26 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Options } from './Question';
-import SetResults from './SetResults';
-import { COUNTY_KEY, livesAbroad, readProgress, saveProgress, type SetProgress } from '../lib/set-progress';
-import type { SetQuestion } from '../lib/sets';
+import PageResults from './PageResults';
+import { COUNTY_KEY, livesAbroad, readProgress, saveProgress, type PageProgress } from '../lib/page-progress';
+import type { PageQuestion } from '../lib/pages';
 
 type Next = { slug: string; title: string; summary: string };
 
 const GATA_MS = 3000; // how long "Gata" stays before the result
 
 /**
- * Answers one set as a column of full-screen questions, scrolled like the feed: the question at the
+ * Answers one page as a column of full-screen questions, scrolled like the feed: the question at the
  * top, its answers at the bottom. The next question only appears once the current one is answered
  * or skipped ("Sari peste"), and the column scrolls on to it; so it could be picked from the answers
  * so far. Scrolling back shows the answers given, which can be changed. After the last question
  * comes "Gata", a pause to go back and change something, then the result: from then on the result
- * is all there is, the questions are closed. It opens where this browser left the set. local: only
+ * is all there is, the questions are closed. It opens where this browser left the page. local: only
  * some counties see it.
  */
-export default function SetQuiz({ slug, title, questions, next, local = false }: { slug: string; title: string; questions: SetQuestion[]; next: Next; local?: boolean }) {
+export default function PageAnswer({ slug, title, questions, next, local = false }: { slug: string; title: string; questions: PageQuestion[]; next: Next; local?: boolean }) {
   const [county, setCounty] = useState<string | null>(null);
-  const [qs, setQs] = useState<SetQuestion[] | null>(null);
-  const [progress, setProgress] = useState<SetProgress>({ answers: {} });
+  const [qs, setQs] = useState<PageQuestion[] | null>(null);
+  const [progress, setProgress] = useState<PageProgress>({ answers: {} });
   const [at, setAt] = useState(0); // the question in view; qs.length is "Gata"
   const scroller = useRef<HTMLDivElement>(null);
   const opened = useRef(false);
@@ -42,11 +42,11 @@ export default function SetQuiz({ slug, title, questions, next, local = false }:
   };
 
   // How far this browser got: the newest screen shown. A question; qs.length is "Gata", the pause
-  // after the last question; qs.length + 1 the result. Sets answered before it was kept count from:
+  // after the last question; qs.length + 1 the result. Pages answered before it was kept count from:
   // the first question without an answer.
   const reached = !qs ? 0 : progress.done ? qs.length + 1 : (progress.reached ?? Math.max(0, qs.findIndex((q) => !(q.id in progress.answers))));
 
-  // Open on the newest question (a finished set shows only its result).
+  // Open on the newest question (a finished page shows only its result).
   useLayoutEffect(() => {
     if (!qs || opened.current) return;
     opened.current = true;
@@ -55,7 +55,7 @@ export default function SetQuiz({ slug, title, questions, next, local = false }:
   }, [qs, reached]);
 
   // "Gata" stays GATA_MS, time to scroll back up and change the last answer; then the result comes
-  // in and the set is done. Leaving it stops the wait; coming back starts it again.
+  // in and the page is done. Leaving it stops the wait; coming back starts it again.
   useEffect(() => {
     if (!qs || reached !== qs.length || at !== qs.length) return;
     const t = setTimeout(() => {
@@ -94,7 +94,7 @@ export default function SetQuiz({ slug, title, questions, next, local = false }:
    * Saves p and scrolls to the next screen. Past the newest question it first adds that screen
    * ("Gata" after the last); the scroll waits for it to be on the page.
    */
-  const moveOn = (i: number, p: SetProgress) => {
+  const moveOn = (i: number, p: PageProgress) => {
     const after = i >= reached ? { ...p, reached: i + 1 } : p;
     saveProgress(slug, after);
     setProgress(after);
@@ -126,7 +126,7 @@ export default function SetQuiz({ slug, title, questions, next, local = false }:
       </div>
 
       {progress.done ? (
-        <SetResults slug={slug} qs={qs} answers={progress.answers} county={county} local={local} next={next} />
+        <PageResults slug={slug} qs={qs} answers={progress.answers} county={county} local={local} next={next} />
       ) : (
       <div ref={scroller} className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain">
         {qs.slice(0, reached + 1).map((q, i) => (

@@ -389,21 +389,21 @@ body {
 
 /* Set covers: the key figure on lime, over the map's dot grid, fading toward the figure. Dark:
    lime figure on raised black. */
-.set-cover { background: var(--acc); color: var(--on-acc); }
-.set-dots {
+.page-cover { background: var(--acc); color: var(--on-acc); }
+.page-dots {
   background-image: radial-gradient(currentColor 1.6px, transparent 1.9px);
   background-size: 16px 16px;
   opacity: 0.16;
   mask-image: linear-gradient(to bottom, #000 30%, transparent 85%);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .set-cover { background: var(--raised); color: var(--acc); }
+  :root:not([data-theme="light"]) .page-cover { background: var(--raised); color: var(--acc); }
 }
-:root[data-theme="dark"] .set-cover { background: var(--raised); color: var(--acc); }
+:root[data-theme="dark"] .page-cover { background: var(--raised); color: var(--acc); }
 /* With a photo: white over the darkened photo on both themes (:not(#_) outranks the dark rules). */
-.set-cover.set-cover-photo:not(#_) { background: #111; color: #fff; }
-.set-card[data-state="started"] { order: -1; }
-.set-card[data-state="done"] { order: 1; }
+.page-cover.page-cover-photo:not(#_) { background: #111; color: #fff; }
+.page-card[data-state="started"] { order: -1; }
+.page-card[data-state="done"] { order: 1; }
 .tag-chip {
   flex-shrink: 0;
   border: 1px solid var(--line);
@@ -426,11 +426,50 @@ body {
 }
 :root[data-theme="dark"] .bar-mine { background: rgb(212 255 58 / 0.3); }
 
-/* "Gata" after a set's last question: the wait before the result, filling up (SetQuiz, GATA_MS). */
+/* "Gata" after a page's last question: the wait before the result, filling up (PageAnswer, GATA_MS). */
 @keyframes countdown {
   from { transform: scaleX(0); }
 }
 .countdown {
   transform-origin: left;
   animation: countdown 3s linear both;
+}
+
+/* One column (phones, portrait windows): a feed card with a photo is the photo, ending above the
+   buttons' section (--band) so it sits higher, with the tags, title and summary over it in light text.
+   One fade over the whole card, drawn by the card itself (::after), is solid from the bottom up past
+   the photo's lower edge, so the buttons sit on it and the photo's edge stays under it. The key figure
+   stays off it. The text's children join the card's grid: tags, title, summary and the people line in
+   rows over the photo, the buttons in the last row. */
+@media not ((min-width: 768px) and (orientation: landscape)) {
+  .feed-photo { --band: 5.75rem; grid-template-rows: minmax(0, 1fr) repeat(4, auto) var(--band); }
+  .feed-photo > .feed-cover { grid-row: 1 / 6; grid-column: 1; }
+  .feed-photo::after {
+    content: "";
+    grid-row: 1 / 7;
+    grid-column: 1;
+    position: relative;
+    pointer-events: none;
+    background: linear-gradient(to top, #161614 calc(var(--band) + 2rem), rgb(22 22 20 / 0.88) calc(var(--band) + 4.5rem),
+      rgb(22 22 20 / 0.65) calc(var(--band) + 8rem), rgb(22 22 20 / 0.35) calc(var(--band) + 13rem),
+      rgb(22 22 20 / 0.12) calc(var(--band) + 19rem), rgb(22 22 20 / 0) calc(var(--band) + 26rem));
+  }
+  .feed-photo .cover-shade { display: none; }
+  .feed-photo > .feed-text {
+    display: contents;
+    --fg: #fff;
+    --dim: rgb(255 255 255 / 0.8);
+    --faint: rgb(255 255 255 / 0.6);
+    --line: rgb(255 255 255 / 0.4);
+    --acc-fg: #fff; /* the title's underline */
+    color: var(--fg);
+  }
+  .feed-photo > .feed-text > * { grid-column: 1; position: relative; z-index: 1; margin: 0 1.25rem 0.75rem; }
+  .feed-photo > .feed-text > :nth-child(1) { grid-row: 2; }
+  .feed-photo > .feed-text > :nth-child(2) { grid-row: 3; }
+  .feed-photo > .feed-text > :nth-child(3) { grid-row: 4; }
+  .feed-photo > .feed-text > :nth-child(4) { grid-row: 5; }
+  /* The buttons' section: 1rem + the 3.5rem buttons + 1.25rem, which is --band. */
+  .feed-photo > .feed-text > :nth-child(5) { grid-row: 6; margin: 0; padding: 1rem 1.25rem 1.25rem; }
+  .feed-photo .cover-stat { display: none; }
 }

@@ -1,0 +1,50 @@
+---
+// A page's cover. With a photo: the photo, darkened toward the bottom, with the key figure over it.
+// Without: the key figure on the dot grid. News pages carry their day.
+import { dayOf, type Page } from '../lib/pages';
+
+interface Props {
+  page: Page;
+  class?: string;
+  credit?: boolean; // show the photo's author and licence on the cover (detail page)
+}
+const { page, class: cls, credit = false } = Astro.props;
+const { stat, image, title } = page.data;
+const day = dayOf(page);
+---
+
+<div class:list={['page-cover relative flex flex-col justify-end overflow-hidden p-5 sm:p-8', image && 'page-cover-photo', cls]}>
+  {image ? (
+    <>
+      <img src={image.src} alt={image.alt} loading={credit ? 'eager' : 'lazy'} decoding="async" class="absolute inset-0 size-full object-cover" />
+      <div aria-hidden class="cover-shade absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/10" />
+    </>
+  ) : (
+    <div aria-hidden class="page-dots absolute inset-0" />
+  )}
+  {day && (
+    <span class="absolute top-4 left-4 z-[2] bg-acc px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.18em] text-on-acc uppercase sm:top-6 sm:left-6">Din știri · {day}</span>
+  )}
+  {stat && (
+    <>
+      <p class:list={['cover-stat relative font-display leading-[0.9] font-[850] tracking-[-0.02em] whitespace-nowrap', image ? 'text-[clamp(2.75rem,12vw,6.5rem)] lg:text-[clamp(3.5rem,5.5vw,6.5rem)]' : 'text-[clamp(3.25rem,15vw,8.5rem)] lg:text-[clamp(4rem,7vw,8.5rem)]']}>{stat.value}</p>
+      <p class="cover-stat relative mt-3 max-w-[30ch] text-base leading-snug font-medium sm:text-lg">{stat.label}</p>
+    </>
+  )}
+  {!stat && <span class="sr-only">{title}</span>}
+  {image && credit && (
+    <a href={image.url} rel="noopener" class="relative mt-4 self-start text-[11px] text-white/70 hover:text-white">
+      {image.illustrative && 'Imagine ilustrativă. '}Foto: {image.credit}, {image.license}
+    </a>
+  )}
+  {/* A finished page: a black check on a lime circle in the middle, over a darkened cover. The same on
+      both themes, so it reads on a photo and on the lime cover alike. It and the badges sit above any
+      shade over the cover (the feed's fade on phones), so the lime stays lime. */}
+  <span data-done hidden class="absolute inset-0 z-[1] grid place-items-center bg-black/35">
+    <svg viewBox="0 0 48 48" class="size-20 drop-shadow-lg sm:size-24" role="img" aria-label="Completat">
+      <circle cx="24" cy="24" r="24" fill="#d4ff3a" />
+      <path d="M14 24.5l7 7 13-14" fill="none" stroke="#121210" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </span>
+  <span data-progress hidden class="absolute top-4 right-4 z-[2] bg-fg px-2.5 py-1 font-mono text-[11px] tracking-[0.18em] text-bg uppercase sm:top-6 sm:right-6"></span>
+</div>

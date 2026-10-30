@@ -1,6 +1,6 @@
-// A quiz's cover photo, from the redactor, which publishes it with the quiz (lib/sets.ts).
+// A page's cover photo, from the redactor, which publishes it with the page (lib/pages.ts).
 import type { APIRoute } from 'astro';
-import { photoOf } from '../../lib/sets';
+import { photoOf } from '../../lib/pages';
 
 export const prerender = false;
 
