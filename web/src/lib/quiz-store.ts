@@ -1,5 +1,5 @@
-// The pages' answers (the redactor's pages/*.md): Cloudflare D1 (binding DB, restricted to the
-// EU), tables in migrations/0003_quizzes.sql, renamed in 0004_pages.sql. Counts leave the server
+// The quizzes' answers (the redactor's quizzes/*.md), by quiz id: Cloudflare D1 (binding DB,
+// restricted to the EU), tables in migrations/0003_quizzes.sql. Counts leave the server
 // already rounded (approx-count.ts): a group under MIN_SHOWN gets 0 and no percentages, so an
 // exact small count is never sent. Server only.
 import { env } from 'cloudflare:workers';
@@ -10,8 +10,8 @@ import type { PageQuestion } from './pages';
  *  pct: per choice id, null under MIN_SHOWN. A multi-choice question gives each choice the share
  *  of people who picked it, so they add up to more than 100. */
 export type Tally = { n: number; pct: Record<string, number> | null };
-/** A page's answers in one group (a county, or the country). people: rounded like n. */
-export type PageTally = { people: number; tallies: Record<string, Tally> };
+/** A quiz's answers in one group (a county, or the country). people: rounded like n. */
+export type QuizTally = { people: number; tallies: Record<string, Tally> };
 
 const db = () => env.DB;
 const DAY = 24 * 60 * 60 * 1000;
@@ -45,16 +45,16 @@ export async function saveVoter(id: string, county: string, age: string): Promis
 /** Deletes the voter and every answer it sent. */
 export async function deleteVoter(id: string) {
   await db().batch([
-    db().prepare('DELETE FROM page_answers WHERE voter_id = ?').bind(id),
+    db().prepare('DELETE FROM quiz_answers WHERE voter_id = ?').bind(id),
     db().prepare('DELETE FROM voters WHERE id = ?').bind(id),
   ]);
 }
 
-/** A finished page's answers, in place of any sent before. picked null: skipped. */
-export async function savePage(v: Voter, slug: string, answers: { qid: string; picked: string[] | null }[]) {
-  const insert = db().prepare('INSERT INTO page_answers (voter_id, page_slug, qid, choices, county, age, answered_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+/** A finished quiz's answers, in place of any sent before. picked null: skipped. */
+export async function saveQuiz(v: Voter, slug: string, answers: { qid: string; picked: string[] | null }[]) {
+  const insert = db().prepare('INSERT INTO quiz_answers (voter_id, quiz_slug, qid, choices, county, age, answered_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
   await db().batch([
-    db().prepare('DELETE FROM page_answers WHERE voter_id = ? AND page_slug = ?').bind(v.id, slug),
+    db().prepare('DELETE FROM quiz_answers WHERE voter_id = ? AND quiz_slug = ?').bind(v.id, slug),
     ...answers.map((a) => insert.bind(v.id, slug, a.qid, a.picked && JSON.stringify(a.picked), v.county, v.age, today())),
   ]);
 }
@@ -71,14 +71,14 @@ function toPercent(counts: number[]) {
   return out;
 }
 
-/** How a page was answered in a county, or in the whole country (county null). */
-export async function pageTally(slug: string, qs: PageQuestion[], county: string | null): Promise<PageTally> {
-  const where = `page_slug = ?${county ? ' AND county = ?' : ''}`;
+/** How a quiz was answered in a county, or in the whole country (county null). */
+export async function quizTally(slug: string, qs: PageQuestion[], county: string | null): Promise<QuizTally> {
+  const where = `quiz_slug = ?${county ? ' AND county = ?' : ''}`;
   const bind = county ? [slug, county] : [slug];
   const [people, answered, picks] = await db().batch([
-    db().prepare(`SELECT COUNT(DISTINCT voter_id) AS n FROM page_answers WHERE ${where}`).bind(...bind),
-    db().prepare(`SELECT qid, COUNT(*) AS n FROM page_answers WHERE ${where} AND choices IS NOT NULL GROUP BY qid`).bind(...bind),
-    db().prepare(`SELECT qid, j.value AS c, COUNT(*) AS n FROM page_answers, json_each(choices) AS j WHERE ${where} GROUP BY qid, j.value`).bind(...bind),
+    db().prepare(`SELECT COUNT(DISTINCT voter_id) AS n FROM quiz_answers WHERE ${where}`).bind(...bind),
+    db().prepare(`SELECT qid, COUNT(*) AS n FROM quiz_answers WHERE ${where} AND choices IS NOT NULL GROUP BY qid`).bind(...bind),
+    db().prepare(`SELECT qid, j.value AS c, COUNT(*) AS n FROM quiz_answers, json_each(choices) AS j WHERE ${where} GROUP BY qid, j.value`).bind(...bind),
   ]);
   const nOf = Object.fromEntries((answered.results as { qid: string; n: number }[]).map((r) => [r.qid, r.n]));
   const picked = (qid: string, c: string) => (picks.results as { qid: string; c: string; n: number }[]).find((r) => r.qid === qid && r.c === c)?.n ?? 0;
@@ -96,11 +96,11 @@ export async function pageTally(slug: string, qs: PageQuestion[], county: string
   return { people: shown((people.results[0] as { n: number }).n), tallies };
 }
 
-/** How many people finished each page: in the whole country, and in a county if one is given. */
-export async function pageCounts(county: string | null): Promise<Record<string, { ro: number; county: number }>> {
+/** How many people finished each quiz: in the whole country, and in a county if one is given. */
+export async function quizCounts(county: string | null): Promise<Record<string, { ro: number; county: number }>> {
   const [ro, here] = await db().batch([
-    db().prepare('SELECT page_slug AS s, COUNT(DISTINCT voter_id) AS n FROM page_answers GROUP BY page_slug'),
-    db().prepare('SELECT page_slug AS s, COUNT(DISTINCT voter_id) AS n FROM page_answers WHERE county = ? GROUP BY page_slug').bind(county ?? ''),
+    db().prepare('SELECT quiz_slug AS s, COUNT(DISTINCT voter_id) AS n FROM quiz_answers GROUP BY quiz_slug'),
+    db().prepare('SELECT quiz_slug AS s, COUNT(DISTINCT voter_id) AS n FROM quiz_answers WHERE county = ? GROUP BY quiz_slug').bind(county ?? ''),
   ]);
   const out: Record<string, { ro: number; county: number }> = {};
   for (const r of ro.results as { s: string; n: number }[]) out[r.s] = { ro: shown(r.n), county: 0 };

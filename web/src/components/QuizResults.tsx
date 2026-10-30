@@ -3,24 +3,24 @@ import { countyByCode } from '../data/counties';
 import PlaceIcon from './PlaceIcon';
 import { MIN_SHOWN, aboutPeople } from '../lib/approx-count';
 import { readProgress, saveProgress } from '../lib/page-progress';
-import type { PageTally } from '../lib/page-store';
+import type { QuizTally } from '../lib/quiz-store';
 import type { PageQuestion } from '../lib/pages';
 
 type Scope = 'tu' | 'county' | 'ro';
 type Next = { slug: string; title: string; summary: string };
 // What came back from the server: the tallies, or why there are none.
-type Loaded = { ro: PageTally; county: PageTally | null } | 'loading' | 'unsent' | 'failed';
+type Loaded = { ro: QuizTally; county: QuizTally | null } | 'loading' | 'unsent' | 'failed';
 
 /** Sends the page's answers if the server doesn't have them yet, then gets how everyone answered. */
-async function load(slug: string, county: string | null): Promise<Loaded> {
+async function load(slug: string, quiz: string, county: string | null): Promise<Loaded> {
   const p = readProgress(slug);
   if (!p.sent) {
-    const res = await fetch('/api/page', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: slug, answers: p.answers }) });
+    const res = await fetch('/api/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz, answers: p.answers }) });
     if (res.status === 401) return 'unsent';
     if (!res.ok) return 'failed';
     saveProgress(slug, { ...readProgress(slug), sent: true });
   }
-  const res = await fetch(`/api/page?page=${encodeURIComponent(slug)}${county ? `&county=${encodeURIComponent(county)}` : ''}`);
+  const res = await fetch(`/api/quiz?quiz=${encodeURIComponent(quiz)}${county ? `&county=${encodeURIComponent(county)}` : ''}`);
   return res.ok ? res.json() : 'failed';
 }
 
@@ -30,9 +30,9 @@ async function load(slug: string, county: string | null): Promise<Loaded> {
  * for whose answers (you, your county, the country) stays fixed above. "Tu" shows only your own
  * answers; your pick is marked in every view. A local page (only some counties see it) has no
  * country view. Your answers are sent to the server first, once (they count from then on). Counts
- * come rounded, and a group under MIN_SHOWN gets no percentages (approx-count.ts, page-store.ts).
+ * come rounded, and a group under MIN_SHOWN gets no percentages (approx-count.ts, quiz-store.ts).
  */
-export default function PageResults({ slug, qs, answers, county, local, next }: { slug: string; qs: PageQuestion[]; answers: Record<string, string[] | null>; county: string | null; local: boolean; next: Next }) {
+export default function QuizResults({ slug, quiz, qs, answers, county, local, next }: { slug: string; quiz: string; qs: PageQuestion[]; answers: Record<string, string[] | null>; county: string | null; local: boolean; next: Next }) {
   const place = county === 'DIASPORA' ? 'Diaspora' : countyByCode(county)?.name;
   const scopes: { id: Scope; label: string }[] = [
     { id: 'tu', label: 'Tu' },
@@ -43,8 +43,8 @@ export default function PageResults({ slug, qs, answers, county, local, next }: 
   const where = scope === 'county' ? `din ${place}` : 'din toată țara';
   const [loaded, setLoaded] = useState<Loaded>('loading');
   useEffect(() => {
-    load(slug, county).then(setLoaded, () => setLoaded('failed'));
-  }, [slug, county]);
+    load(slug, quiz, county).then(setLoaded, () => setLoaded('failed'));
+  }, [slug, quiz, county]);
   // How each question was answered, by your county or the country.
   const group = typeof loaded === 'object' && scope !== 'tu' ? (scope === 'ro' ? loaded.ro : loaded.county) : null;
   const tallies = group?.tallies ?? null;
@@ -114,7 +114,7 @@ export default function PageResults({ slug, qs, answers, county, local, next }: 
         })}
 
         <section className="mx-auto flex min-h-full w-full max-w-[1440px] snap-start flex-col justify-center gap-8 px-4 py-8 sm:px-8">
-          <a href={`/p/${next.slug}/answer`} className="press group block max-w-xl border border-line bg-raised/60 p-5 hover:border-faint sm:p-6">
+          <a href={`/p/${next.slug}/quiz`} className="press group block max-w-xl border border-line bg-raised/60 p-5 hover:border-faint sm:p-6">
             <span className="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Următorul quiz</span>
             <span className="mt-2 block font-display text-3xl font-[850] uppercase">{next.title} →</span>
             <span className="mt-1 block text-dim">{next.summary}</span>

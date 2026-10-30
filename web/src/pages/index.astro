@@ -57,6 +57,7 @@ const arrow = '<svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-tra
           return (
             <article
               data-page={page.id}
+              data-quiz={page.data.quiz}
               data-home={ids(page, 'diaspora')}
               data-abroad={ids(page, 'romania')}
               data-tags={JSON.stringify(tagsOf(page))}
@@ -82,7 +83,7 @@ const arrow = '<svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-tra
                     two-column layout below xl). */}
                 <div class="mt-1 flex gap-2">
                   <a href={url} class="press inline-flex h-14 items-center justify-center border border-line px-3 font-display text-sm font-[700] tracking-wide whitespace-nowrap uppercase hover:border-faint wide-xl:px-5 wide-xl:text-lg">Vezi mai mult</a>
-                  <a href={`${url}/answer`} class="press group inline-flex h-14 flex-1 items-center justify-center gap-2.5 bg-acc px-4 font-display text-xl font-[800] tracking-wide whitespace-nowrap text-on-acc uppercase wide-xl:flex-none wide-xl:gap-3 wide-xl:px-7 wide-xl:text-2xl">
+                  <a href={`${url}/quiz`} class="press group inline-flex h-14 flex-1 items-center justify-center gap-2.5 bg-acc px-4 font-display text-xl font-[800] tracking-wide whitespace-nowrap text-on-acc uppercase wide-xl:flex-none wide-xl:gap-3 wide-xl:px-7 wide-xl:text-2xl">
                     <span data-start-label>Răspunde</span><Fragment set:html={arrow} />
                   </a>
                 </div>

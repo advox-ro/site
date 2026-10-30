@@ -4,7 +4,7 @@ import { COHORTS } from '../../data/counties';
 import { isHuman } from '../../lib/turnstile';
 import { ipKey, readJson } from '../../lib/http';
 import { QuizError } from '../../lib/quiz-server';
-import { deleteVoter, saveVoter } from '../../lib/page-store';
+import { deleteVoter, saveVoter } from '../../lib/quiz-store';
 import { VOTER_COOKIE, setVoter, voterId } from '../../lib/voter-cookie';
 
 export const prerender = false;

@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import SiteHeader from '../../../components/SiteHeader.astro';
-import PageAnswer from '../../../components/PageAnswer';
+import PageQuiz from '../../../components/PageQuiz';
 import { allPages, questionsOf } from '../../../lib/pages';
 
 // Rendered on request: the pages come from the redactor (lib/pages.ts).
@@ -9,19 +9,20 @@ export const prerender = false;
 
 const pages = await allPages();
 const i = pages.findIndex((s) => s.id === Astro.params.slug);
-if (i < 0) return new Response(null, { status: 404 });
+if (i < 0 || !pages[i].data.quiz) return new Response(null, { status: 404 });
 const page = pages[i];
 const next = pages[(i + 1) % pages.length];
 ---
 
 <Base title={`${page.data.title} — advox`} noindex>
-  {/* Exactly the screen: the questions scroll inside it (PageAnswer), one screen each. */}
+  {/* Exactly the screen: the questions scroll inside it (PageQuiz), one screen each. */}
   <div class="flex h-dvh flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
     <SiteHeader />
     <main class="flex min-h-0 w-full flex-1 flex-col">
-      <PageAnswer
+      <PageQuiz
         client:load
         slug={page.id}
+        quiz={page.data.quiz!}
         title={page.data.title}
         questions={questionsOf(page)}
         next={{ slug: next.id, title: next.data.title, summary: next.data.summary }}

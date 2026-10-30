@@ -102,7 +102,7 @@ export async function showPeople() {
   const name = county === 'DIASPORA' ? 'Diaspora' : countyByCode(county)?.name;
   let counts: Record<string, { ro: number; county: number }>;
   try {
-    const res = await fetch(`/api/pages${county ? `?county=${encodeURIComponent(county)}` : ''}`);
+    const res = await fetch(`/api/quizzes${county ? `?county=${encodeURIComponent(county)}` : ''}`);
     if (!res.ok) return;
     counts = await res.json();
   } catch {
@@ -110,7 +110,8 @@ export async function showPeople() {
   }
   for (const el of document.querySelectorAll<HTMLElement>('[data-page]')) {
     const local = !!el.dataset.counties;
-    const n = local ? counts[el.dataset.page!]?.county : counts[el.dataset.page!]?.ro;
+    const quiz = el.dataset.quiz;
+    const n = quiz && (local ? counts[quiz]?.county : counts[quiz]?.ro);
     if (!n || n < MIN_SHOWN || (local && !name)) continue;
     for (const p of el.querySelectorAll('[data-people]')) p.textContent = aboutPeople(n);
     for (const p of el.querySelectorAll('[data-people-where]')) p.textContent = local ? `din ${name}` : 'din toată țara';

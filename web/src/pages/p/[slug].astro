@@ -34,7 +34,7 @@ const ids = (skip: string) => idsOf(page, skip);
     <main class="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-8 lg:py-10">
       <a href="/" class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg">← Înapoi</a>
 
-      <article data-page={page.id} data-own data-counties={page.data.counties && JSON.stringify(page.data.counties)} data-home={ids('diaspora')} data-abroad={ids('romania')} class="mt-4 grid gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-14">
+      <article data-page={page.id} data-quiz={page.data.quiz} data-own data-counties={page.data.counties && JSON.stringify(page.data.counties)} data-home={ids('diaspora')} data-abroad={ids('romania')} class="mt-4 grid gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-14">
         <div class="max-sm:-mx-4 lg:sticky lg:top-8 lg:self-start">
           <PageCover page={page} credit class="aspect-[4/3] lg:aspect-[4/4.2]" />
         </div>
@@ -47,7 +47,7 @@ const ids = (skip: string) => idsOf(page, skip);
           </p>
           <h1 class="font-display text-5xl leading-[0.95] font-[850] uppercase sm:text-6xl">{page.data.title}</h1>
           <p class="text-lg text-dim">{page.data.summary}</p>
-          <a href={`/p/${page.id}/answer`} class="press group inline-flex h-14 items-center justify-center gap-3 bg-acc px-7 font-display text-2xl font-[800] tracking-wide text-on-acc uppercase sm:self-start">
+          <a href={`/p/${page.id}/quiz`} class="press group inline-flex h-14 items-center justify-center gap-3 bg-acc px-7 font-display text-2xl font-[800] tracking-wide text-on-acc uppercase sm:self-start">
             <span data-start-label>Răspunde</span>
             <svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-transform duration-200 ease-out [@media(hover:hover)]:group-hover:translate-x-1"><path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>
           </a>

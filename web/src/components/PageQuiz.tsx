@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Options } from './Question';
-import PageResults from './PageResults';
+import QuizResults from './QuizResults';
 import { COUNTY_KEY, livesAbroad, readProgress, saveProgress, type PageProgress } from '../lib/page-progress';
 import type { PageQuestion } from '../lib/pages';
 
@@ -17,7 +17,7 @@ const GATA_MS = 3000; // how long "Gata" stays before the result
  * is all there is, the questions are closed. It opens where this browser left the page. local: only
  * some counties see it.
  */
-export default function PageAnswer({ slug, title, questions, next, local = false }: { slug: string; title: string; questions: PageQuestion[]; next: Next; local?: boolean }) {
+export default function PageQuiz({ slug, quiz, title, questions, next, local = false }: { slug: string; quiz: string; title: string; questions: PageQuestion[]; next: Next; local?: boolean }) {
   const [county, setCounty] = useState<string | null>(null);
   const [qs, setQs] = useState<PageQuestion[] | null>(null);
   const [progress, setProgress] = useState<PageProgress>({ answers: {} });
@@ -126,7 +126,7 @@ export default function PageAnswer({ slug, title, questions, next, local = false
       </div>
 
       {progress.done ? (
-        <PageResults slug={slug} qs={qs} answers={progress.answers} county={county} local={local} next={next} />
+        <QuizResults slug={slug} quiz={quiz} qs={qs} answers={progress.answers} county={county} local={local} next={next} />
       ) : (
       <div ref={scroller} className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain">
         {qs.slice(0, reached + 1).map((q, i) => (

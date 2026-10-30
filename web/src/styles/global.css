@@ -426,7 +426,7 @@ body {
 }
 :root[data-theme="dark"] .bar-mine { background: rgb(212 255 58 / 0.3); }
 
-/* "Gata" after a page's last question: the wait before the result, filling up (PageAnswer, GATA_MS). */
+/* "Gata" after a page's last question: the wait before the result, filling up (PageQuiz, GATA_MS). */
 @keyframes countdown {
   from { transform: scaleX(0); }
 }

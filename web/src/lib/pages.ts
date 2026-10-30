@@ -31,6 +31,7 @@ export type Page = {
     date?: Date; // news pages: the day of the news; they lead the feed
     counties?: string[]; // local pages: county codes (counties.ts), DSP for the diaspora; absent: everyone
     wiki?: string;
+    quiz?: string; // its quiz's id (the redactor's quizzes/<id>.md); absent: no questions
     stat?: { value: string; label: string };
     image?: { src: string; alt: string; credit: string; license: string; url: string; illustrative: boolean };
     sources: number[];

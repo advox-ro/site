@@ -1,4 +1,4 @@
-// Which voter this browser is (lib/page-store.ts): its id, in an HttpOnly cookie. Server only.
+// Which voter this browser is (lib/quiz-store.ts): its id, in an HttpOnly cookie. Server only.
 import type { AstroCookies } from 'astro';
 
 // SameSite=Lax: never sent with another site's POST. Browsers keep a cookie at most 400 days; it
