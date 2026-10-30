@@ -82,18 +82,28 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
   wireDecks();
   showPeople();
 
-  // Up and Down go a page at a time, wherever the focus is (Left and Right move the page's cards, deck.ts).
+  // Up and Down (and Space, Shift+Space; Page Down, Page Up) go a page at a time, wherever the focus
+  // is; Left and Right move the page's cards (deck.ts). The page in view is the one whose top is
+  // nearest the feed's; pressed again while scrolling, it goes on from the page it is heading to.
   const feed = document.getElementById('feed')!;
+  let heading: { to: number; until: number } | null = null;
   document.addEventListener('keydown', (e) => {
-    if (e.altKey || e.ctrlKey || e.metaKey || (e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return;
-    const d = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+    const on = e.target as HTMLElement;
+    if (e.altKey || e.ctrlKey || e.metaKey || on.closest('input, textarea, select, [contenteditable]')) return;
+    const space = e.key === ' ' && !on.closest('button, a, summary');
+    const d = e.key === 'ArrowDown' || e.key === 'PageDown' || (space && !e.shiftKey) ? 1 : e.key === 'ArrowUp' || e.key === 'PageUp' || (space && e.shiftKey) ? -1 : 0;
     if (!d) return;
-    const shown = [...document.querySelectorAll<HTMLElement>('.page-card')].filter((c) => c.offsetParent);
-    const at = shown.findIndex((c) => c.offsetTop + c.offsetHeight / 2 > feed.scrollTop);
-    const to = shown[Math.max(0, Math.min(shown.length - 1, at + d))];
-    if (!to) return;
+    // In the order they're shown, not the document's: begun pages first, answered ones last (global.css).
+    const top = feed.getBoundingClientRect().top;
+    const shown = [...document.querySelectorAll<HTMLElement>('.page-card')].filter((c) => c.offsetParent).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+    if (!shown.length) return;
+    const near = shown.reduce((best, c, k) => (Math.abs(c.getBoundingClientRect().top - top) < Math.abs(shown[best].getBoundingClientRect().top - top) ? k : best), 0);
+    const from = heading && Date.now() < heading.until ? heading.to : near;
+    const to = Math.max(0, Math.min(shown.length - 1, from + d));
     e.preventDefault();
-    feed.scrollTo({ top: to.offsetTop - shown[0].offsetTop, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    heading = { to, until: Date.now() + 600 };
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    feed.scrollBy({ top: shown[to].getBoundingClientRect().top - top, behavior: smooth ? 'smooth' : 'auto' });
   });
 
   // The search: every word must be in the page's title, summary or topics, without diacritics or
