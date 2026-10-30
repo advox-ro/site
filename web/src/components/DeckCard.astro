@@ -79,7 +79,7 @@ const first = rows[0]?.value ?? '';
           <polyline points={vs.map((v, k) => `${x(k)},${y(v)}`).join(' ')} fill="none" stroke="var(--line)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
           {vs.map((v, k) => (
             <g>
-              <circle cx={x(k)} cy={y(v)} r={k === last ? 8 : 5} fill={k === last ? 'var(--acc)' : 'var(--fg)'} stroke="var(--fg)" stroke-width="2.5" />
+              <circle cx={x(k)} cy={y(v)} r={k === last ? 8 : 5} class:list={[k === last && 'deck-chart-last']} fill={k === last ? 'var(--acc)' : 'var(--fg)'} stroke="var(--fg)" stroke-width="2.5" />
               {value.has(k) && <text x={x(k) + nudge(k)} y={value.get(k)} text-anchor={anchor(k)} class="deck-chart-value">{rows[k].value}</text>}
               {date.has(k) && <text x={x(k) + nudge(k)} y={146} text-anchor={anchor(k)} class="deck-chart-label">{rows[k].label}</text>}
             </g>

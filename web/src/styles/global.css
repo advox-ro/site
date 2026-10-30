@@ -526,6 +526,11 @@ body {
 .deck-bar { background: var(--acc); }
 .deck-chart-value { font-family: var(--font-display); font-weight: 850; font-size: 17px; fill: var(--fg); }
 .deck-chart-label { font-size: 11px; fill: var(--dim); }
+/* The latest point: lime, outlined in ink on paper and in lime on black. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .deck-chart-last { stroke: var(--acc); }
+}
+:root[data-theme="dark"] .deck-chart-last { stroke: var(--acc); }
 .deck-dots { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 4px; flex: 1; max-width: 13rem; }
 .deck-dots > span { aspect-ratio: 1; border-radius: 999px; background: var(--line); }
 .deck-dots > .on { background: var(--acc); }
