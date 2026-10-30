@@ -404,6 +404,7 @@ body {
 .page-card[data-state="done"] { order: 1; }
 .tag-chip {
   flex-shrink: 0;
+  border-radius: 999px;
   border: 1px solid var(--line);
   padding: 0.35rem 0.8rem;
   font-size: 12px;

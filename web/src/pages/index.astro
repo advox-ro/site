@@ -36,20 +36,23 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
     } catch {}
   </script>
   <div class="flex h-dvh flex-col pt-[env(safe-area-inset-top)]">
-    <SiteHeader />
-
-    {/* Where you said you live, and the tags to filter by. */}
-    <div class="mx-auto mt-3 flex w-full max-w-[1440px] items-center gap-4 px-4 wide:mt-5 wide:px-8">
-      <a href="/welcome" id="where" class="shrink-0 font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg">Alege județul</a>
-      <div class="-mr-4 flex min-w-0 gap-2 overflow-x-auto pr-4 [scrollbar-width:none] wide:mr-0 wide:pr-0" role="group" aria-label="Filtrează după temă">
-        <button data-tag="" aria-pressed="true" class="tag-chip">Toate</button>
-        {tags.map((t) => <button data-tag={t} aria-pressed="false" class="tag-chip" data-county-tag={t === COUNTY_TAG ? '' : undefined}>{t === COUNTY_TAG ? 'județul tău' : t}</button>)}
+    <SiteHeader>
+      {/* What you're interested in: words searched in the pages' titles, summaries and topics, or a
+          topic picked from the list under the box. */}
+      <div slot="search" class="feed-search max-w-xl">
+        <div class="relative">
+          <svg class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-dim" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" stroke-linecap="square" /></svg>
+          <input id="search" type="search" autocomplete="off" placeholder="Ce te interesează?" aria-label="Caută o temă" class="h-10 w-full rounded-full border border-line bg-raised pr-4 pl-9 text-[15px] outline-none placeholder:text-dim focus:border-fg" />
+        </div>
+        <div id="topics" hidden class="absolute inset-x-4 top-full z-30 mt-2 flex flex-wrap gap-2 rounded-2xl border border-line bg-raised p-3 shadow-lg sm:inset-x-8" role="group" aria-label="Teme">
+          {tags.map((t) => <button type="button" data-tag={t} class="tag-chip" data-county-tag={t === COUNTY_TAG ? '' : undefined}>{t === COUNTY_TAG ? 'județul tău' : t}</button>)}
+        </div>
       </div>
-    </div>
+    </SiteHeader>
 
     {/* The feed: one page per screen, snapping like a reel, each page a deck of cards read sideways
         (components/PageDeck.astro). 100cqh: the feed's height. */}
-    <main id="feed" class="mt-3 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain [container-type:size] wide:mt-5">
+    <main id="feed" class="mt-2 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain [container-type:size] wide:mt-4">
       <div class="mx-auto flex w-full max-w-[1440px] flex-col wide:px-8">
         {pages.map((page, n) => (
           <article
@@ -58,8 +61,9 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
             data-home={ids(page, 'diaspora')}
             data-abroad={ids(page, 'romania')}
             data-tags={JSON.stringify(tagsOf(page))}
+            data-search={[page.data.title, page.data.summary, ...tagsOf(page)].join(' ')}
             data-counties={page.data.counties && JSON.stringify(page.data.counties)}
-            class="page-card flex h-[100cqh] min-h-[30rem] snap-start snap-always flex-col py-3 wide:h-[calc(100dvh-9rem)] wide:pb-8"
+            class="page-card flex h-[100cqh] min-h-[30rem] snap-start snap-always flex-col py-3 wide:h-[100cqh] wide:pb-6"
           >
             <PageDeck page={page} href={`/p/${page.id}`} eager={n === 0} />
           </article>
@@ -72,18 +76,11 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
 
 <script>
   import { wireDecks } from '../lib/deck';
-  import { wirePages, showPeople, COUNTY_KEY, AGE_KEY } from '../lib/page-progress';
-  import { countyByCode } from '../data/counties';
+  import { wirePages, showPeople } from '../lib/page-progress';
 
   wirePages();
   wireDecks();
   showPeople();
-
-  try {
-    const county = countyByCode(localStorage.getItem(COUNTY_KEY));
-    const age = localStorage.getItem(AGE_KEY);
-    if (county) document.getElementById('where')!.textContent = [county.name, age].filter(Boolean).join(' · ');
-  } catch {}
 
   // Up and Down go a page at a time, wherever the focus is (Left and Right move the page's cards, deck.ts).
   const feed = document.getElementById('feed')!;
@@ -99,14 +96,27 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
     feed.scrollTo({ top: to.offsetTop - shown[0].offsetTop, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   });
 
-  // One tag at a time; "Toate" clears it. Back to the top so the first match is in view.
-  const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-tag]')];
-  for (const chip of chips)
+  // The search: every word must be in the page's title, summary or topics, without diacritics or
+  // case. A topic from the list fills the box. Back to the top, so the first match is in view.
+  const plain = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  const search = document.getElementById('search') as HTMLInputElement;
+  const topics = document.getElementById('topics')!;
+  const filter = () => {
+    const words = plain(search.value).split(/\s+/).filter(Boolean);
+    for (const card of document.querySelectorAll<HTMLElement>('.page-card')) {
+      const text = plain(card.dataset.search! + ' ' + (card.querySelector('[data-county-tag]')?.textContent ?? ''));
+      card.classList.toggle('hidden', !words.every((w) => text.includes(w)));
+    }
+    feed.scrollTo({ top: 0 });
+  };
+  search.addEventListener('input', filter);
+  search.addEventListener('focus', () => (topics.hidden = false));
+  document.addEventListener('click', (e) => !(e.target as HTMLElement).closest('.feed-search') && (topics.hidden = true));
+  search.addEventListener('keydown', (e) => e.key === 'Escape' && ((topics.hidden = true), search.blur()));
+  for (const chip of topics.querySelectorAll<HTMLButtonElement>('[data-tag]'))
     chip.addEventListener('click', () => {
-      const tag = chip.dataset.tag;
-      chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
-      for (const card of document.querySelectorAll<HTMLElement>('.page-card'))
-        card.classList.toggle('hidden', !!tag && !JSON.parse(card.dataset.tags!).includes(tag));
-      document.getElementById('feed')!.scrollTo({ top: 0 });
+      search.value = chip.textContent!.trim();
+      topics.hidden = true;
+      filter();
     });
 </script>
