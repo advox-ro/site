@@ -57,7 +57,7 @@ const first = rows[0]?.value ?? '';
       const nudge = (k: number) => (anchor(k) === 'start' ? -8 : anchor(k) === 'end' ? 8 : 0);
       return (
         <svg viewBox="0 0 300 150" class="w-full overflow-visible" aria-hidden>
-          <polyline points={vs.map((v, k) => `${x(k)},${y(v)}`).join(' ')} fill="none" stroke="var(--fg)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+          <polyline points={vs.map((v, k) => `${x(k)},${y(v)}`).join(' ')} fill="none" stroke="var(--line)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
           {vs.map((v, k) => (
             <g>
               <circle cx={x(k)} cy={y(v)} r={k === last ? 8 : 5} fill={k === last ? 'var(--acc)' : 'var(--fg)'} stroke="var(--fg)" stroke-width="2.5" />
