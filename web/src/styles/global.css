@@ -420,6 +420,12 @@ body {
 /* Results: the bar of your own answer. Lime under ink on paper; on black, where the text is light, a
    dimmed lime. */
 .bar-mine { background: var(--acc); }
+/* The result's bars grow into place when they come in (QuizResults). */
+@keyframes bar-grow { from { transform: scaleX(0); } }
+@keyframes bar-rise { from { transform: scaleY(0); } }
+.bar-grow { transform-origin: left; animation: bar-grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bar-rise { transform-origin: bottom; animation: bar-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) { .bar-grow, .bar-rise { animation: none; } }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .bar-mine { background: rgb(212 255 58 / 0.3); }
 }

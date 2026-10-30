@@ -111,10 +111,12 @@ export default function PageQuiz({ slug, quiz, title, questions, next, local = f
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {/* The questions' place and the way out; the result has its own deck, without them. */}
+      {!progress.done && (
       <div className="mx-auto w-full max-w-[1440px] px-4 pt-3 sm:px-8">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 font-mono text-[11px] tracking-[0.18em] text-dim uppercase">
           <span className="truncate">{title}</span>
-          <span className="tabular-nums">{progress.done ? 'Rezultat' : at < qs.length ? `${at + 1} / ${qs.length}` : 'Gata'}</span>
+          <span className="tabular-nums">{at < qs.length ? `${at + 1} / ${qs.length}` : 'Gata'}</span>
           {/* Answers so far stay in this browser, so leaving loses nothing. */}
           <span className="flex justify-end">
             <a href="/" className="hover:text-fg">Închide ✕</a>
@@ -124,6 +126,7 @@ export default function PageQuiz({ slug, quiz, title, questions, next, local = f
           <div className="h-full bg-acc-fg transition-[width] duration-300" style={{ width: `${(answered / qs.length) * 100}%` }} />
         </div>
       </div>
+      )}
 
       {progress.done ? (
         <QuizResults slug={slug} quiz={quiz} qs={qs} answers={progress.answers} county={county} local={local} next={next} />
