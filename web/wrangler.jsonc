@@ -20,8 +20,8 @@
 		{ "binding": "DB", "database_name": "advox", "database_id": "84652370-b963-422b-89fb-1a244e441ca9" }
 	],
 	// The quizzes come from the redactor (github.com/advox-ro/redactor), which publishes them: a
-	// private connection between the two Workers (src/lib/sets.ts). Remote: on localhost too, the site
-	// reads the deployed redactor.
+	// private connection between the two Workers (src/lib/pages.ts). Remote: under `astro dev` the
+	// site reads the deployed redactor (astro.config.mjs).
 	"services": [{ "binding": "REDACTOR", "service": "redactor", "entrypoint": "Content", "remote": true }],
 	// Sessions per IP per minute (see src/pages/api/session.ts). Counted per Cloudflare location.
 	"ratelimits": [

@@ -30,5 +30,7 @@ export default defineConfig({
     plugins: [tailwindcss()]
   },
 
-  adapter: cloudflare()
+  // Remote bindings (wrangler.jsonc, the redactor's) only for `astro dev`: on localhost the site reads
+  // the deployed redactor; the build needs no connection to Cloudflare.
+  adapter: cloudflare({ remoteBindings: process.argv.includes('dev') })
 });
