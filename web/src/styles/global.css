@@ -478,6 +478,12 @@ body {
   .deck-stack .deck { flex-flow: row wrap; container-type: normal; }
   .deck-stack .deck-card { width: 27rem; height: 36rem; }
 }
+/* A page on its own (pages/p/[slug].astro): its cards read from top to bottom, one column, each as
+   tall as its content; the cover keeps its shape. */
+.deck-article .deck { flex-direction: column; align-items: center; gap: 1rem; overflow: visible; container-type: normal; }
+.deck-article .deck-card { width: min(100%, 36rem); height: auto; container-type: inline-size; }
+.deck-article .deck-card:first-child { aspect-ratio: 4 / 5; }
+.deck-article [data-deck-dots], .deck-article .deck-arrow { display: none; }
 /* Each card sizes its drawings to itself (cqw, cqh). */
 .deck-card { container-type: size; overflow-wrap: break-word; }
 /* The arrows: round, over the deck's edges, only on wide screens with a pointer, shown on hover. */
