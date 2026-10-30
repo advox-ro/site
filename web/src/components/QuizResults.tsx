@@ -80,7 +80,7 @@ export default function QuizResults({ slug, quiz, qs, answers, county, local, ne
         </div>
       )}
 
-      <div className="deck-wrap relative mx-auto mt-3 flex min-h-0 w-full max-w-[1440px] flex-1 flex-col wide:px-8">
+      <div className="deck-wrap relative mx-auto mt-3 mb-4 flex min-h-0 w-full max-w-[1440px] flex-1 flex-col wide:px-8">
         <div data-deck tabIndex={0} aria-label="Rezultatul" className="deck relative flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-4 outline-none wide:px-0">
           {/* What it adds up to. */}
           <section className="deck-card overflow-hidden" style={{ padding: 0, border: 0 }}>
