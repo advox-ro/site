@@ -50,8 +50,7 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
       </div>
     </SiteHeader>
 
-    {/* The feed: one page per screen, snapping like a reel (one page per swipe on a phone; on a wide
-        screen a fast scroll may pass several, still stopping on one), each page a deck of cards read sideways
+    {/* The feed: one page per screen, snapping like a reel, each page a deck of cards read sideways
         (components/PageDeck.astro). 100cqh: the feed's height. */}
     <main id="feed" class="mt-2 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain [container-type:size] wide:mt-4">
       <div class="mx-auto flex w-full max-w-[1440px] flex-col wide:px-8">
@@ -64,7 +63,7 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
             data-tags={JSON.stringify(tagsOf(page))}
             data-search={[page.data.title, page.data.summary, ...tagsOf(page)].join(' ')}
             data-counties={page.data.counties && JSON.stringify(page.data.counties)}
-            class="page-card flex h-[100cqh] min-h-[30rem] snap-start snap-always flex-col wide:snap-normal py-3 wide:h-[100cqh] wide:pb-6"
+            class="page-card flex h-[100cqh] min-h-[30rem] snap-start snap-always flex-col py-3 wide:h-[100cqh] wide:pb-6"
           >
             <PageDeck page={page} href={`/p/${page.id}`} eager={n === 0} />
           </article>
