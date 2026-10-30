@@ -50,11 +50,10 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
       </div>
     </SiteHeader>
 
-    {/* The feed: one page per screen, snapping like a reel on a phone (one page per swipe); on a wide
-        screen it scrolls freely, with the mouse or a touchpad's momentum, and then settles on the nearest
-        page (the script below). Each page is a deck of cards read sideways
+    {/* The feed: one page per screen, snapping like a reel (one page per swipe on a phone; on a wide
+        screen a fast scroll may pass several, still stopping on one), each page a deck of cards read sideways
         (components/PageDeck.astro). 100cqh: the feed's height. */}
-    <main id="feed" class="mt-2 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto wide:snap-none overscroll-contain [container-type:size] wide:mt-4">
+    <main id="feed" class="mt-2 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain [container-type:size] wide:mt-4">
       <div class="mx-auto flex w-full max-w-[1440px] flex-col wide:px-8">
         {pages.map((page, n) => (
           <article
@@ -65,7 +64,7 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
             data-tags={JSON.stringify(tagsOf(page))}
             data-search={[page.data.title, page.data.summary, ...tagsOf(page)].join(' ')}
             data-counties={page.data.counties && JSON.stringify(page.data.counties)}
-            class="page-card flex h-[100cqh] min-h-[30rem] snap-start snap-always flex-col py-3 wide:h-[100cqh] wide:pb-6"
+            class="page-card flex h-[100cqh] min-h-[30rem] snap-start snap-always flex-col wide:snap-normal py-3 wide:h-[100cqh] wide:pb-6"
           >
             <PageDeck page={page} href={`/p/${page.id}`} eager={n === 0} />
           </article>
@@ -107,19 +106,6 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
     const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
     feed.scrollBy({ top: shown[to].getBoundingClientRect().top - top, behavior: smooth ? 'smooth' : 'auto' });
   });
-
-  // On a wide screen, once a scroll stops, the feed settles on the page nearest its top: CSS snapping
-  // there would turn each touchpad swipe into a single page.
-  const wide = matchMedia('(min-width: 768px) and (orientation: landscape)');
-  let settle = 0;
-  const settleOnPage = () => {
-    if (!wide.matches) return;
-    const top = feed.getBoundingClientRect().top;
-    const pages = [...document.querySelectorAll<HTMLElement>('.page-card')].filter((c) => c.offsetParent);
-    const off = pages.map((c) => c.getBoundingClientRect().top - top).reduce((a, b) => (Math.abs(b) < Math.abs(a) ? b : a), Infinity);
-    if (Math.abs(off) > 2 && Math.abs(off) < feed.clientHeight) feed.scrollBy({ top: off, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-  };
-  feed.addEventListener('scroll', () => (clearTimeout(settle), (settle = window.setTimeout(settleOnPage, 140))), { passive: true });
 
   // The search: every word must be in the page's title, summary or topics, without diacritics or
   // case. A topic from the list fills the box. Back to the top, so the first match is in view.
