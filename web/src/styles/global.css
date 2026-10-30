@@ -390,6 +390,10 @@ body {
 /* Set covers: the key figure on lime, over the map's dot grid, fading toward the figure. Dark:
    lime figure on raised black. */
 .page-cover { background: var(--acc); color: var(--on-acc); }
+/* A lime card is the cover alone, rounded itself: under it, the card's own background would show as
+   a thin line along the rounded edge. */
+.deck-card:has(> .page-cover) { background: none; }
+.deck-card > .page-cover { border-radius: inherit; }
 .page-dots {
   background-image: radial-gradient(currentColor 1.6px, transparent 1.9px);
   background-size: 16px 16px;
