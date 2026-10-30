@@ -528,7 +528,7 @@ body {
 .deck-dots { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 4px; flex: 1; max-width: 13rem; }
 .deck-dots > span { aspect-ratio: 1; border-radius: 999px; background: var(--line); }
 .deck-dots > .on { background: var(--acc); }
-.deck-timeline { display: flex; flex-direction: column; gap: 0.9rem; border-left: 2px solid var(--line); padding-left: 1rem; }
+.deck-timeline { display: flex; flex-direction: column; gap: 0.9rem; border-left: 2px solid var(--line); padding-left: 1rem; margin-left: 5px; }
 .deck-timeline > li { position: relative; display: flex; flex-direction: column; }
 .deck-timeline > li::before { content: ""; position: absolute; left: calc(-1rem - 6px); top: 0.3rem; width: 10px; height: 10px; border-radius: 999px; background: var(--acc); }
 .deck-source { margin-top: 1rem; font-size: 0.8rem; color: var(--dim); }
