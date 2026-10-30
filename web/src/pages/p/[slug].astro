@@ -1,10 +1,12 @@
 ---
-// A page on its own, to read from top to bottom: its cards (components/PageDeck.astro) one under
-// another, then the next page this reader would see in the feed.
+// A page on its own, read as an article from top to bottom: its title and summary, the photo, then
+// what Vox wrote on its cards (components/DeckCard.astro, flat) as the article's parts, its sources,
+// the quiz, and the next page this reader would see in the feed.
 import Base from '../../layouts/Base.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
-import PageDeck from '../../components/PageDeck.astro';
-import { allPages, questionsOf } from '../../lib/pages';
+import DeckCard from '../../components/DeckCard.astro';
+import { COUNTY_TAG } from '../../lib/page-progress';
+import { allPages, allSourcesOf, articlesOfCard, dayOf, localLabel, questionsOf, wikiTitle } from '../../lib/pages';
 
 // Rendered on request: the pages come from the redactor (lib/pages.ts).
 export const prerender = false;
@@ -17,22 +19,83 @@ const page = pages[i];
 const following = [...pages.slice(i + 1), ...pages.slice(0, i)];
 const idsOf = (s: typeof page, skip: string) => JSON.stringify(questionsOf(s).filter((q) => q.where !== skip).map((q) => q.id));
 const ids = (skip: string) => idsOf(page, skip);
+const { image } = page.data;
+const day = dayOf(page);
+const wiki = await wikiTitle(page);
+const allSources = await allSourcesOf(page);
+const articles = (ns: number[]) => articlesOfCard(page, ns);
 ---
 
 <Base title={`${page.data.title} — advox`} description={page.data.summary}>
   <div class="flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
     <SiteHeader />
     <main class="flex-1 py-4">
-      <a href="/" class="mx-auto block max-w-[1440px] px-4 font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg wide:px-8">← Înapoi</a>
+      <a href="/" class="mx-auto block max-w-[40rem] px-4 font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg">← Înapoi</a>
 
-      <article data-page={page.id} data-quiz={page.data.quiz} data-own data-counties={page.data.counties && JSON.stringify(page.data.counties)} data-home={ids('diaspora')} data-abroad={ids('romania')} class="deck-article mx-auto mt-3 max-w-[1440px]">
-        <PageDeck page={page} title="h1" eager />
+      <article data-page={page.id} data-quiz={page.data.quiz} data-own data-counties={page.data.counties && JSON.stringify(page.data.counties)} data-home={ids('diaspora')} data-abroad={ids('romania')} class="page-article mx-auto mt-6 max-w-[40rem] px-4">
+        <header>
+          <p class="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.18em] text-dim uppercase">
+            {day && <span class="bg-acc px-2 py-0.5 font-semibold text-on-acc">{day}</span>}
+            {page.data.counties && <span data-local class="text-fg">{localLabel(page.data.counties)}</span>}
+            {page.data.tags.map((t) => (t === COUNTY_TAG ? <span data-county-tag>județul tău</span> : <span>{t}</span>))}
+          </p>
+          <h1 class="mt-4 font-display text-[clamp(2.4rem,9vw,4rem)] leading-[0.95] font-[850] uppercase">{page.data.title}</h1>
+          <p class="mt-4 text-xl leading-snug text-dim">{page.data.summary}</p>
+        </header>
+
+        {image && (
+          <figure class="mt-8">
+            <img src={image.src} alt={image.alt} decoding="async" class="aspect-[3/2] w-full rounded-2xl object-cover" />
+            <figcaption class="mt-2 text-xs text-dim"><a href={image.url} rel="noopener" class="hover:text-fg">{image.illustrative && 'Imagine ilustrativă. '}Foto: {image.credit}, {image.license}</a></figcaption>
+          </figure>
+        )}
+
+        {(page.data.cards ?? []).map((c) => (
+          <DeckCard card={c} flat>
+            {articles(c.sources).length > 0 ? (
+              <p class="deck-source">{articles(c.sources).length > 1 ? 'Surse' : 'Sursa'}: {articles(c.sources).map((a, j) => <>{j > 0 && ', '}<a href={a.url} rel="noopener">{a.outlet}</a></>)}</p>
+            ) : (
+              wiki && <p class="deck-source">Din wiki: <a href={`/wiki/${page.data.wiki}`}>{wiki}</a></p>
+            )}
+          </DeckCard>
+        ))}
+
+        {page.data.quiz && (
+          <section class="page-cover relative mt-12 overflow-hidden rounded-2xl p-6">
+            <div aria-hidden class="page-dots absolute inset-0" />
+            <div class="relative">
+              <h2 class="deck-title">Vocea ta</h2>
+              <p data-count class="mt-6 font-display text-4xl leading-[0.95] font-[850] uppercase">{questionsOf(page).length} întrebări</p>
+              <p class="mt-3 text-lg">Răspunsurile sunt anonime.</p>
+              <a href={`/p/${page.id}/quiz`} class="quiz-cta quiz-cta-wide press group mt-5">
+                <svg class="quiz-cta-done" viewBox="0 0 20 20" aria-hidden><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <span data-start-label>Răspunde</span>
+                <svg class="quiz-cta-arrow" viewBox="0 0 20 20" aria-hidden><path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>
+              </a>
+            </div>
+          </section>
+        )}
+
+        {allSources.length > 0 && (
+          <section class="mt-12">
+            <h2 class="article-heading">Surse</h2>
+            <ol class="prose mt-4 text-base">
+              {allSources.map((s) => (
+                <li>
+                  {s.url ? <a href={s.url} rel="noopener">{s.title}</a> : s.title}
+                  {s.outlet && ` — ${s.outlet}`}
+                </li>
+              ))}
+            </ol>
+            {wiki && <a href={`/wiki/${page.data.wiki}`} class="mt-4 inline-block font-mono text-[11px] tracking-[0.18em] uppercase underline decoration-acc-fg underline-offset-4">Citește tot în wiki: {wiki} →</a>}
+          </section>
+        )}
       </article>
 
-      <div class="mx-auto max-w-[36rem] px-4">
+      <div class="mx-auto mb-10 max-w-[40rem] px-4">
         {following.map((s) => (
           <a hidden data-next href={`/p/${s.id}`} data-counties={s.data.counties && JSON.stringify(s.data.counties)} data-home={idsOf(s, 'diaspora')} data-abroad={idsOf(s, 'romania')} class="group mt-6 flex items-baseline justify-between gap-4">
-            <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Următorul quiz</span>
+            <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Vezi și</span>
             <span class="font-display text-2xl font-[800] uppercase group-hover:underline">{s.data.title} →</span>
           </a>
         ))}

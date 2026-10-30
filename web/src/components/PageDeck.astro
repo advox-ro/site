@@ -1,9 +1,9 @@
 ---
-// A page as a deck of cards, read sideways: the cover, the key figure (when the cover is a photo), a
-// card for each fact with the articles it comes from, the sources, and the quiz. The page's own view
-// (pages/p/[slug].astro) and the feed (pages/index.astro) both show it; lib/deck.ts moves it. The
-// parent holds the page's data-* (lib/page-progress.ts fills in the count, the state, the start).
-import { dayOf, localLabel, questionsOf, sourcesOf, wikiTitle, type Page } from '../lib/pages';
+// A page as a deck of cards, read sideways: the cover, Vox's cards with the articles they rest on,
+// the sources, and the quiz. The feed (pages/index.astro) shows it, and the preview
+// (pages/preview/[slug].astro); lib/deck.ts moves it. The parent holds the page's data-*
+// (lib/page-progress.ts fills in the count, the state, the start).
+import { allSourcesOf, articlesOfCard, dayOf, localLabel, questionsOf, wikiTitle, type Page } from '../lib/pages';
 import { COUNTY_TAG } from '../lib/page-progress';
 import DeckCard from './DeckCard.astro';
 
@@ -17,31 +17,11 @@ const { page, title = 'h2', eager = false, href } = Astro.props;
 const Heading = title;
 const { image } = page.data;
 const day = dayOf(page);
-const sources = await sourcesOf(page);
 const wiki = await wikiTitle(page);
-// A wiki source as its articles: one line may name several ("A — X; B — Y. https://a ; https://b"),
-// each "Title — Outlet, date", paired with its address in order. When they can't be paired, the
-// line stays one item, with its first address.
-function articlesOf(text: string, url?: string) {
-  const urls = [...new Set([...(url ? [url] : []), ...(text.match(/https?:\/\/[^\s;]+/g) ?? [])])];
-  const plain = text.replace(/https?:\/\/[^\s;]+/g, '').replace(/[\s;.]+$/, '');
-  const parts = plain.split(/;\s+/);
-  const split = (t: string) => {
-    const cut = t.lastIndexOf(' — ');
-    return cut < 0 ? { title: t } : { title: t.slice(0, cut), outlet: t.slice(cut + 3) };
-  };
-  if (parts.length > 1 && parts.length === urls.length && parts.every((t) => t.includes(' — ')))
-    return parts.map((t, k) => ({ ...split(t), url: urls[k] }));
-  return [{ ...split(plain), url: urls[0] }];
-}
-// One list, as the wiki writes it ("Title — Publisher"): the articles, then the wiki's sources.
-const allSources = [
-  ...page.data.news,
-  ...sources.flatMap((s) => articlesOf(s.text, s.url)),
-];
+const allSources = await allSourcesOf(page);
 // Vox's cards, each with its articles (news); a page from the wiki has none of its own.
 const cards = page.data.cards ?? [];
-const articles = (ns: number[]) => ns.map((n) => page.data.news[n - 1]).filter(Boolean);
+const articles = (ns: number[]) => articlesOfCard(page, ns);
 ---
 
 <div class="deck-wrap relative flex min-h-0 flex-1 flex-col">

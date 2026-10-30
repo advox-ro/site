@@ -117,6 +117,29 @@ export async function sourcesOf(page: Page) {
   return page.data.sources.map((n) => ({ n, text: byNumber.get(n)?.text ?? `Sursa ${n}`, url: byNumber.get(n)?.url }));
 }
 
+// A wiki source as its articles: one line may name several ("A — X; B — Y. https://a ; https://b"),
+// each "Title — Outlet, date", paired with its address in order. When they can't be paired, the
+// line stays one item, with its first address.
+function articlesOf(text: string, url?: string): { title: string; outlet?: string; url?: string }[] {
+  const urls = [...new Set([...(url ? [url] : []), ...(text.match(/https?:\/\/[^\s;]+/g) ?? [])])];
+  const plain = text.replace(/https?:\/\/[^\s;]+/g, '').replace(/[\s;.]+$/, '');
+  const parts = plain.split(/;\s+/);
+  const split = (t: string) => {
+    const cut = t.lastIndexOf(' — ');
+    return cut < 0 ? { title: t } : { title: t.slice(0, cut), outlet: t.slice(cut + 3) };
+  };
+  if (parts.length > 1 && parts.length === urls.length && parts.every((t) => t.includes(' — ')))
+    return parts.map((t, k) => ({ ...split(t), url: urls[k] }));
+  return [{ ...split(plain), url: urls[0] }];
+}
+
+/** Every source of a page, as the wiki writes them ("Title — Publisher"): its articles (news), then
+ *  its wiki sources. */
+export const allSourcesOf = async (page: Page) => [...page.data.news, ...(await sourcesOf(page)).flatMap((s) => articlesOf(s.text, s.url))];
+
+/** The articles a card rests on, by their numbers in Surse (news pages). */
+export const articlesOfCard = (page: Page, ns: number[]) => ns.map((n) => page.data.news[n - 1]).filter(Boolean);
+
 export const wikiTitle = async (page: Page) => (page.data.wiki ? ((await wikiPages()).find((p) => p.slug === page.data.wiki)?.data.title ?? page.data.wiki) : null);
 
 const DAY = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short', timeZone: 'UTC' });

@@ -478,12 +478,11 @@ body {
   .deck-stack .deck { flex-flow: row wrap; container-type: normal; }
   .deck-stack .deck-card { width: 27rem; height: 36rem; }
 }
-/* A page on its own (pages/p/[slug].astro): its cards read from top to bottom, one column, each as
-   tall as its content; the cover keeps its shape. */
-.deck-article .deck { flex-direction: column; align-items: center; gap: 1rem; overflow: visible; container-type: normal; }
-.deck-article .deck-card { width: min(100%, 36rem); height: auto; container-type: inline-size; }
-.deck-article .deck-card:first-child { aspect-ratio: 4 / 5; }
-.deck-article [data-deck-dots], .deck-article .deck-arrow { display: none; }
+/* A page on its own, read as an article (pages/p/[slug].astro): Vox's cards as its parts, without
+   the card around them, each sizing its drawing to the column (cqw). */
+.article-part { container-type: inline-size; display: flex; flex-direction: column; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+.article-heading { font-family: var(--font-display); font-weight: 850; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.05; text-transform: uppercase; text-wrap: balance; }
+.article-part > div { padding-top: 1.25rem; }
 /* Each card sizes its drawings to itself (cqw, cqh). */
 .deck-card { container-type: size; overflow-wrap: break-word; }
 /* The arrows: round, over the deck's edges, only on wide screens with a pointer, shown on hover. */

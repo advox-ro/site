@@ -1,12 +1,14 @@
 ---
 // One of a page's cards, as Vox wrote it (pages/README.md in the redactor): its title, then its data
-// drawn by kind, then its sentence. The sources come in the slot.
+// drawn by kind, then its sentence. The sources come in the slot. In a deck it is a card; flat, a
+// part of the page read as an article (pages/p/[slug].astro).
 import type { Card } from '../lib/pages';
 
 interface Props {
   card: Card;
+  flat?: boolean;
 }
-const { card } = Astro.props;
+const { card, flat = false } = Astro.props;
 const rows = card.rows;
 // A value's number, for the bars: 517.100 → 517100, 6,3% → 6.3. Bars start at zero.
 const num = (v: string) => Number((v.match(/\d[\d.,]*/)?.[0] ?? '0').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
@@ -22,8 +24,8 @@ const big = (v: string, max = '6rem') => `font-size: min(${max}, calc(100cqw / $
 const first = rows[0]?.value ?? '';
 ---
 
-<section class="deck-card">
-  <h3 class="deck-title">{card.title}</h3>
+<section class:list={[flat ? 'article-part' : 'deck-card']}>
+  <h3 class:list={[flat ? 'article-heading' : 'deck-title']}>{card.title}</h3>
 
   <div class="mt-auto flex min-h-0 flex-col gap-4 overflow-y-auto pt-4">
     {card.kind === 'cifră' && <p class="font-display leading-[0.9] font-[850] tracking-[-0.02em] whitespace-nowrap" style={big(first)}>{first}</p>}
