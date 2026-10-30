@@ -16,7 +16,7 @@ const set = sets[i];
 const following = [...sets.slice(i + 1), ...sets.slice(0, i)];
 const sources = await sourcesOf(set);
 const wiki = await wikiTitle(set);
-// One list, one look: the articles, then the wiki's sources, whose text is "Title — Publisher, date".
+// One list, as the wiki writes it ("Title — Publisher"): the articles, then the wiki's sources.
 const allSources = [
   ...set.data.news,
   ...sources.map((s) => {
@@ -61,17 +61,14 @@ const ids = (skip: string) => idsOf(set, skip);
           {allSources.length > 0 && (
             <section class="border-t border-line pt-6">
               <h2 class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Surse</h2>
-              <ul class="mt-4 space-y-3">
-                {allSources.map((s) => {
-                  const body = (
-                    <>
-                      {s.outlet && <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{s.outlet}</span>}
-                      <span class={`mt-0.5 block leading-snug ${s.url ? 'underline decoration-line underline-offset-4 group-hover:decoration-acc-fg' : ''}`}>{s.title}</span>
-                    </>
-                  );
-                  return <li>{s.url ? <a href={s.url} rel="noopener" class="group block">{body}</a> : <div class="block">{body}</div>}</li>;
-                })}
-              </ul>
+              <ol class="prose mt-4">
+                {allSources.map((s) => (
+                  <li>
+                    {s.url ? <a href={s.url} rel="noopener">{s.title}</a> : s.title}
+                    {s.outlet && ` — ${s.outlet}`}
+                  </li>
+                ))}
+              </ol>
             </section>
           )}
 
