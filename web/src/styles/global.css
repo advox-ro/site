@@ -483,6 +483,9 @@ body {
 .article-part { container-type: inline-size; display: flex; flex-direction: column; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--line); }
 .article-heading { font-family: var(--font-display); font-weight: 850; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.05; text-transform: uppercase; text-wrap: balance; }
 .article-part > div { padding-top: 1.25rem; }
+/* In the article, a card's drawing sits between paragraphs, as a figure with a short title. */
+.article-body .article-part { margin: 2rem 0; padding: 1.25rem; border: 0; border-radius: 1rem; background: var(--raised); }
+.article-body .article-part .article-heading { font-size: 1.1rem; }
 /* Each card sizes its drawings to itself (cqw, cqh). */
 .deck-card { container-type: size; overflow-wrap: break-word; }
 /* The arrows: round, over the deck's edges, only on wide screens with a pointer, shown on hover. */

@@ -50,7 +50,25 @@ const articles = (ns: number[]) => articlesOfCard(page, ns);
           </figure>
         )}
 
-        {(page.data.cards ?? []).map((c) => (
+        {/* The article Vox wrote, its cards' drawings where it puts them. */}
+        <div class="article-body mt-10">
+          {(page.data.article ?? []).map((b) => {
+            if (b.kind === 'heading') return <h2 class="article-heading mt-10">{b.text}</h2>;
+            if (b.kind === 'text') return <p class="mt-5 text-lg leading-relaxed">{b.text}</p>;
+            const c = (page.data.cards ?? []).find((x) => x.title === b.text);
+            return c && (
+              <DeckCard card={c} flat>
+                {articles(c.sources).length > 0 ? (
+                  <p class="deck-source">{articles(c.sources).length > 1 ? 'Surse' : 'Sursa'}: {articles(c.sources).map((a, j) => <>{j > 0 && ', '}<a href={a.url} rel="noopener">{a.outlet}</a></>)}</p>
+                ) : (
+                  wiki && <p class="deck-source">Din wiki: <a href={`/wiki/${page.data.wiki}`}>{wiki}</a></p>
+                )}
+              </DeckCard>
+            );
+          })}
+        </div>
+
+        {!page.data.article?.length && (page.data.cards ?? []).map((c) => (
           <DeckCard card={c} flat>
             {articles(c.sources).length > 0 ? (
               <p class="deck-source">{articles(c.sources).length > 1 ? 'Surse' : 'Sursa'}: {articles(c.sources).map((a, j) => <>{j > 0 && ', '}<a href={a.url} rel="noopener">{a.outlet}</a></>)}</p>

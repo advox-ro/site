@@ -36,6 +36,7 @@ export type Page = {
     wiki?: string;
     quiz?: string; // its quiz's id (the redactor's quizzes/<id>.md); absent: no questions
     cards?: Card[]; // the cards Vox wrote for the page
+    article?: { kind: 'text' | 'heading' | 'card'; text: string; sources: number[] }[]; // the page read as an article: paragraphs, subheadings, the places of cards (by title)
     stat?: { value: string; label: string };
     image?: { src: string; alt: string; credit: string; license: string; url: string; illustrative: boolean };
     sources: number[];
