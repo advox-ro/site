@@ -109,6 +109,17 @@ const first = rows[0]?.value ?? '';
       </ol>
     )}
 
+    {card.kind === 'listă' && (
+      <ul class="flex flex-col gap-3">
+        {rows.map((r) => (
+          <li class="flex gap-3">
+            <span class="deck-bar mt-2 h-2.5 w-2.5 shrink-0 rounded-full" />
+            <span class="text-lg leading-snug">{r.label && <b class="font-semibold">{r.label}: </b>}{r.value}</span>
+          </li>
+        ))}
+      </ul>
+    )}
+
     {card.kind === 'voci' && (
       <div class="flex flex-col gap-4">
         {rows.map((r) => (
