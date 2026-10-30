@@ -2,7 +2,7 @@
 // read from it at request time (lib/redactor.ts): their questions resolved from the question pool or
 // written in the page, their sources from the wiki page they cite. Server only.
 import { countyByCode } from '../data/counties';
-import { publishedPages, questionPool, wikiPage, wikiPages, type Pool } from './redactor';
+import { draft, publishedPages, questionPool, wikiPage, wikiPages, type Published, type Pool } from './redactor';
 import type { QuestionData } from '../components/Question';
 
 type OwnQuestion = {
@@ -56,18 +56,30 @@ export async function allPages(): Promise<Page[]> {
   let pool = await questionPool();
   const named = published.flatMap((q) => (q.data.questions as Page['data']['questions']).filter((x) => typeof x === 'string'));
   if (named.some((id) => !pool.questions[id])) pool = await questionPool(true);
-  const list = published.map(({ slug, data, html }) => {
-    const d = data as Page['data'] & { date?: string | Date };
-    return {
-      id: slug,
-      html,
-      questions: questionsIn(slug, d.questions, pool),
-      data: { ...d, date: d.date ? new Date(d.date) : undefined, image: d.image && { ...d.image, illustrative: !!d.image.illustrative }, sources: d.sources ?? [], news: d.news ?? [] },
-    };
-  });
+  const list = published.map((p) => pageOf(p, pool));
   list.sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0) || (a.data.order ?? 0) - (b.data.order ?? 0));
   cached = { at: Date.now(), list };
   return list;
+}
+
+function pageOf({ slug, data, html }: Published, pool: Pool): Page {
+  const d = data as Page['data'] & { date?: string | Date };
+  return {
+    id: slug,
+    html,
+    questions: questionsIn(slug, d.questions, pool),
+    data: { ...d, date: d.date ? new Date(d.date) : undefined, image: d.image && { ...d.image, illustrative: !!d.image.illustrative }, sources: d.sources ?? [], news: d.news ?? [] },
+  };
+}
+
+/** A page on one of the editor's branches, before it is merged (the redactor's preview.ts), with
+ *  its photo from the branch too; or null. */
+export async function draftPage(branch: string): Promise<Page | null> {
+  const p = await draft(branch);
+  if (!p) return null;
+  const page = pageOf(p, await questionPool());
+  if (page.data.image) page.data.image.src = `/preview/photo?branch=${encodeURIComponent(branch)}`;
+  return page;
 }
 
 /** A page's photo from the redactor, by its file name, or null. */

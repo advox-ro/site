@@ -3,7 +3,7 @@
 // and the question pool. Server only.
 import { env } from 'cloudflare:workers';
 
-/** A page as the redactor publishes it: its front matter and its facts as HTML. */
+/** A page as the redactor publishes it: its front matter and its cards' text as HTML. */
 export type Published = { slug: string; data: Record<string, unknown>; html: string };
 
 export type WikiEntry = { slug: string; data: { title: string; summary: string; updated: Date; order: number } };
@@ -40,6 +40,8 @@ type Content = {
   wiki(): Promise<Entry<WikiEntry>[]>;
   wikiPage(slug: string): Promise<Entry<WikiPage> | null>;
   pool(): Promise<Pool>;
+  draft(branch: string): Promise<Published | null>;
+  draftPhoto(branch: string): Promise<Response | null>;
 };
 const redactor = () => env.REDACTOR as unknown as Content;
 
@@ -47,6 +49,10 @@ export const publishedPages = () => redactor().pages();
 
 /** A page's photo, by its file name, or null. */
 export const photo = (file: string) => redactor().photo(file);
+
+/** A page on one of the editor's branches (page/<slug>), before it is merged, and its photo; or null. */
+export const draft = (branch: string) => redactor().draft(branch);
+export const draftPhoto = (branch: string) => redactor().draftPhoto(branch);
 
 const dated = <T extends Entry<WikiEntry>>(p: T) => ({ ...p, data: { ...p.data, updated: new Date(p.data.updated) } });
 

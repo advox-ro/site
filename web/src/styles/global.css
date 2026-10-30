@@ -455,6 +455,15 @@ body {
   .deck { scroll-padding-inline: 0; container-type: size; }
   .deck-card { width: min(40rem, 75cqh); scroll-snap-align: start; }
 }
+/* A preview (pages/preview/[slug].astro): the cards one under another, each as tall as on a phone,
+   or in rows of 3:4 cards on a wide screen. */
+.deck-stack .deck { flex-direction: column; overflow: visible; }
+.deck-stack .deck-card { height: 40rem; }
+.deck-stack [data-deck-dots], .deck-stack .deck-arrow { display: none; }
+@media (min-width: 768px) and (orientation: landscape) {
+  .deck-stack .deck { flex-flow: row wrap; container-type: normal; }
+  .deck-stack .deck-card { width: 27rem; height: 36rem; }
+}
 /* Each card sizes its drawings to itself (cqw, cqh). */
 .deck-card { container-type: size; overflow-wrap: break-word; }
 /* The arrows: round, over the deck's edges, only on wide screens with a pointer, shown on hover. */
