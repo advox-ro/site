@@ -15,6 +15,14 @@ const set = sets[i];
 const next = sets[(i + 1) % sets.length];
 const sources = await sourcesOf(set);
 const wiki = await wikiTitle(set);
+// One list, one look: the articles, then the wiki's sources, whose text is "Title — Publisher, date".
+const allSources = [
+  ...set.data.news,
+  ...sources.map((s) => {
+    const cut = s.text.lastIndexOf(' — ');
+    return cut < 0 ? { title: s.text, url: s.url } : { title: s.text.slice(0, cut), outlet: s.text.slice(cut + 3).replace(/\.$/, ''), url: s.url };
+  }),
+];
 const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.where !== skip).map((q) => q.id));
 ---
 
@@ -48,28 +56,20 @@ const ids = (skip: string) => JSON.stringify(questionsOf(set).filter((q) => q.wh
             {wiki && <a href={`/wiki/${set.data.wiki}`} class="mt-5 inline-block font-mono text-[11px] tracking-[0.18em] uppercase underline decoration-acc-fg underline-offset-4">Citește tot în wiki: {wiki} →</a>}
           </section>
 
-          {(set.data.news.length > 0 || sources.length > 0) && (
+          {allSources.length > 0 && (
             <section class="border-t border-line pt-6">
               <h2 class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Surse</h2>
-              {set.data.news.length > 0 && (
-                <ul class="mt-4 space-y-3">
-                  {set.data.news.map((n) => (
-                    <li>
-                      <a href={n.url} rel="noopener" class="group block">
-                        <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{n.outlet}</span>
-                        <span class="mt-0.5 block leading-snug underline decoration-line underline-offset-4 group-hover:decoration-acc-fg">{n.title}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {sources.length > 0 && (
-                <ol class="mt-4 space-y-2 text-sm text-dim">
-                  {sources.map((s) => (
-                    <li>{s.url ? <a href={s.url} rel="noopener" class="underline decoration-line underline-offset-4 hover:text-fg">{s.text}</a> : s.text}</li>
-                  ))}
-                </ol>
-              )}
+              <ul class="mt-4 space-y-3">
+                {allSources.map((s) => {
+                  const body = (
+                    <>
+                      {s.outlet && <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{s.outlet}</span>}
+                      <span class={`mt-0.5 block leading-snug ${s.url ? 'underline decoration-line underline-offset-4 group-hover:decoration-acc-fg' : ''}`}>{s.title}</span>
+                    </>
+                  );
+                  return <li>{s.url ? <a href={s.url} rel="noopener" class="group block">{body}</a> : <div class="block">{body}</div>}</li>;
+                })}
+              </ul>
             </section>
           )}
 
