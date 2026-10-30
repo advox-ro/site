@@ -8,6 +8,7 @@ import type { QuizTally, Tally } from '../lib/quiz-store';
 import type { PageQuestion } from '../lib/pages';
 
 type Scope = 'county' | 'ro';
+const SLOW_MS = 3000;
 type Next = { slug: string; title: string; summary: string };
 // What came back from the server: the tallies, or why there are none.
 type Loaded = { ro: QuizTally; county: QuizTally | null } | 'loading' | 'unsent' | 'failed';
@@ -49,6 +50,14 @@ export default function QuizResults({ slug, quiz, qs, answers, county, local, ne
     load(slug, quiz, county).then(setLoaded, () => setLoaded('failed'));
   }, [slug, quiz, county]);
   useEffect(() => wireDecks(), []);
+  // Nothing while the answers come; a spinner only if they take longer than SLOW_MS.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (loaded !== 'loading') return;
+    const t = setTimeout(() => setSlow(true), SLOW_MS);
+    return () => clearTimeout(t);
+  }, [loaded]);
+  const waiting = loaded === 'loading';
   const group = typeof loaded === 'object' ? (scope === 'ro' ? loaded.ro : loaded.county) : null;
   const shown = (q: PageQuestion): Tally | null => {
     const t = group?.tallies[q.id];
@@ -87,7 +96,8 @@ export default function QuizResults({ slug, quiz, qs, answers, county, local, ne
             <div className="page-cover relative flex h-full flex-col p-6">
               <div aria-hidden className="page-dots absolute inset-0" />
               <h2 className="deck-title relative">Rezultatul tău</h2>
-              <div className="relative mt-auto">
+              {waiting && slow && <span aria-label="Se încarcă" className="spinner relative m-auto" />}
+              {!waiting && <div key={scope} className="fade-up relative mt-auto">
                 {group && counted.length ? (
                   <>
                     <p className="font-display text-[clamp(4rem,24cqw,8rem)] leading-[0.85] font-[850] tracking-[-0.02em]">
@@ -104,7 +114,7 @@ export default function QuizResults({ slug, quiz, qs, answers, county, local, ne
                   </>
                 ) : (
                   <p className="font-display text-[clamp(2.5rem,13cqw,4.5rem)] leading-[0.9] font-[850] uppercase">
-                    {loaded === 'loading' ? 'Se adună…' : 'Ești printre primii'}
+                    Ești printre primii
                   </p>
                 )}
                 <p className="mt-4 text-base">
@@ -114,12 +124,12 @@ export default function QuizResults({ slug, quiz, qs, answers, county, local, ne
                   {group && !counted.length && ` Procentele apar de la ${MIN_SHOWN} de răspunsuri.`}
                 </p>
                 <p className="mt-1 text-sm opacity-70">Răspund cei care vor, nu un eșantion al țării.</p>
-              </div>
+              </div>}
             </div>
           </section>
 
           {qs.map((q) => (
-            <QuestionCard key={q.id} q={q} mine={answers[q.id] ?? null} tally={shown(q)} where={where} />
+            <QuestionCard key={q.id} q={q} mine={answers[q.id] ?? null} tally={shown(q)} where={where} waiting={waiting} scope={scope} />
           ))}
 
           {/* On to the next page. */}
@@ -149,7 +159,7 @@ export default function QuizResults({ slug, quiz, qs, answers, county, local, ne
  * many), then every answer with its share, yours marked. A scale is drawn as it was asked: five
  * columns, their height the share.
  */
-function QuestionCard({ q, mine, tally, where }: { q: PageQuestion; mine: string[] | null; tally: Tally | null; where: string }) {
+function QuestionCard({ q, mine, tally, where, waiting, scope }: { q: PageQuestion; mine: string[] | null; tally: Tally | null; where: string; waiting: boolean; scope: Scope }) {
   const pct = tally?.pct ?? null;
   const top = pct && topOf(q, pct);
   const mineTop = !!(top && mine?.includes(top.id));
@@ -159,7 +169,8 @@ function QuestionCard({ q, mine, tally, where }: { q: PageQuestion; mine: string
   return (
     <section className="deck-card">
       <h2 className="text-[clamp(1.25rem,6cqw,1.6rem)] leading-tight font-semibold text-balance">{q.text}</h2>
-      <div className="mt-auto flex min-h-0 flex-col gap-4 overflow-y-auto pt-4">
+      {/* Drawn once the answers are here, fading in, the bars growing (again for the other scope). */}
+      {!waiting && <div key={scope} className="fade-up mt-auto flex min-h-0 flex-col gap-4 overflow-y-auto pt-4">
         {pct ? (
           <div>
             <p className="font-display text-[clamp(2.75rem,15cqw,4.5rem)] leading-[0.9] font-[850] tracking-[-0.02em]">{mine ? `${yours}%` : `${pct[top!.id]}%`}</p>
@@ -180,7 +191,7 @@ function QuestionCard({ q, mine, tally, where }: { q: PageQuestion; mine: string
           </ul>
         )}
         {tally && q.type === 'multi' && <p className="text-xs text-dim">Fiecare putea alege mai multe variante.</p>}
-      </div>
+      </div>}
     </section>
   );
 }
