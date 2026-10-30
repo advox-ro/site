@@ -44,25 +44,44 @@ const first = rows[0]?.value ?? '';
 
     {card.kind === 'evoluție' && (() => {
       // A line, not bars: its scale spans the values (with room around them), so a change of a few
-      // tenths shows. With many points, only the first, the last and the highest carry their value
-      // and date, so they don't run into each other.
+      // tenths shows. Values and dates are placed in order of importance (the last, the highest, the
+      // lowest, the first, then the rest), each above its point or else below, and left out where
+      // it would run into one already placed.
       const vs = rows.map((r) => num(r.value));
       const lo = Math.min(...vs), hi = Math.max(...vs), pad = (hi - lo || hi || 1) * 0.5;
       const base = Math.max(0, lo - pad), top = hi + pad * 0.6;
       const y = (v: number) => 30 + (1 - (v - base) / (top - base)) * 90;
       const x = (k: number) => (rows.length === 1 ? 150 : 14 + (k * 272) / (rows.length - 1));
       const last = rows.length - 1;
-      const shown = (k: number) => rows.length <= 4 || k === 0 || k === last || k === vs.indexOf(hi);
       const anchor = (k: number) => (rows.length > 1 && k === 0 ? 'start' : rows.length > 1 && k === last ? 'end' : 'middle');
       const nudge = (k: number) => (anchor(k) === 'start' ? -8 : anchor(k) === 'end' ? 8 : 0);
+      // A label's box, from its length (about 0.58em a character in the display font).
+      const box = (k: number, text: string, size: number, at: number) => {
+        const w = text.length * size * 0.58, left = x(k) + nudge(k) - (anchor(k) === 'start' ? 0 : anchor(k) === 'end' ? w : w / 2);
+        return { l: left - 3, r: left + w + 3, t: at - size, b: at + 3 };
+      };
+      type Box = ReturnType<typeof box>;
+      const hit = (a: Box, bs: Box[]) => bs.some((b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b);
+      const order = [...new Set([last, vs.indexOf(hi), vs.indexOf(lo), 0, ...rows.map((_, k) => k)])];
+      const points = vs.map((v, k) => ({ l: x(k) - 9, r: x(k) + 9, t: y(v) - 9, b: y(v) + 9 }));
+      const placed: Box[] = [...points], dates: Box[] = [];
+      const value = new Map<number, number>(), date = new Set<number>();
+      for (const k of order) {
+        const at = [y(vs[k]) - 14, y(vs[k]) + 28].find((a) => a <= 132 && !hit(box(k, rows[k].value, 17, a), placed));
+        if (at === undefined) continue;
+        placed.push(box(k, rows[k].value, 17, at));
+        value.set(k, at);
+        const d = box(k, rows[k].label ?? '', 11, 146);
+        if (!hit(d, dates)) (dates.push(d), date.add(k));
+      }
       return (
         <svg viewBox="0 0 300 150" class="w-full overflow-visible" aria-hidden>
           <polyline points={vs.map((v, k) => `${x(k)},${y(v)}`).join(' ')} fill="none" stroke="var(--line)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
           {vs.map((v, k) => (
             <g>
               <circle cx={x(k)} cy={y(v)} r={k === last ? 8 : 5} fill={k === last ? 'var(--acc)' : 'var(--fg)'} stroke="var(--fg)" stroke-width="2.5" />
-              {shown(k) && <text x={x(k) + nudge(k)} y={y(v) - 14} text-anchor={anchor(k)} class="deck-chart-value">{rows[k].value}</text>}
-              {shown(k) && <text x={x(k) + nudge(k)} y={146} text-anchor={anchor(k)} class="deck-chart-label">{rows[k].label}</text>}
+              {value.has(k) && <text x={x(k) + nudge(k)} y={value.get(k)} text-anchor={anchor(k)} class="deck-chart-value">{rows[k].value}</text>}
+              {date.has(k) && <text x={x(k) + nudge(k)} y={146} text-anchor={anchor(k)} class="deck-chart-label">{rows[k].label}</text>}
             </g>
           ))}
         </svg>
