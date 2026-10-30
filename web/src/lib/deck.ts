@@ -53,10 +53,13 @@ export function wireDecks() {
     let frame = 0;
     deck.addEventListener('scroll', () => (cancelAnimationFrame(frame), (frame = requestAnimationFrame(shade))), { passive: true });
     new ResizeObserver(shade).observe(deck);
-    // Within the deck only: scrollIntoView would also move the feed around it.
+    // Within the deck only: scrollIntoView would also move the feed around it. The card goes where it
+    // snaps (centered on phones, at the start on wide screens), or the snap pulls the deck back.
     const go = (d: number) => {
       const card = cards[Math.max(0, Math.min(cards.length - 1, current + d))];
-      deck.scrollTo({ left: card.offsetLeft - (deck.clientWidth - card.offsetWidth) / 2, behavior: reduce ? 'auto' : 'smooth' });
+      const centered = getComputedStyle(card).scrollSnapAlign.includes('center');
+      const left = card.offsetLeft - (centered ? (deck.clientWidth - card.offsetWidth) / 2 : 0);
+      deck.scrollTo({ left, behavior: reduce ? 'auto' : 'smooth' });
     };
     prev.addEventListener('click', () => go(-1));
     next.addEventListener('click', () => go(1));
