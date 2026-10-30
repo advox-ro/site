@@ -1,9 +1,10 @@
 ---
+// A page on its own: its deck of cards (components/PageDeck.astro), then the next page this reader
+// would see in the feed.
 import Base from '../../layouts/Base.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
-import PageCover from '../../components/PageCover.astro';
-import { allPages, localLabel, questionsOf, sourcesOf, wikiTitle } from '../../lib/pages';
-import { COUNTY_TAG } from '../../lib/page-progress';
+import PageDeck from '../../components/PageDeck.astro';
+import { allPages, questionsOf } from '../../lib/pages';
 
 // Rendered on request: the pages come from the redactor (lib/pages.ts).
 export const prerender = false;
@@ -14,16 +15,6 @@ if (i < 0) return new Response(null, { status: 404 });
 const page = pages[i];
 // The pages after this one, in the feed's order: the page shows the first this reader sees.
 const following = [...pages.slice(i + 1), ...pages.slice(0, i)];
-const sources = await sourcesOf(page);
-const wiki = await wikiTitle(page);
-// One list, as the wiki writes it ("Title — Publisher"): the articles, then the wiki's sources.
-const allSources = [
-  ...page.data.news,
-  ...sources.map((s) => {
-    const cut = s.text.lastIndexOf(' — ');
-    return cut < 0 ? { title: s.text, url: s.url } : { title: s.text.slice(0, cut), outlet: s.text.slice(cut + 3).replace(/\.$/, ''), url: s.url };
-  }),
-];
 const idsOf = (s: typeof page, skip: string) => JSON.stringify(questionsOf(s).filter((q) => q.where !== skip).map((q) => q.id));
 const ids = (skip: string) => idsOf(page, skip);
 ---
@@ -31,64 +22,30 @@ const ids = (skip: string) => idsOf(page, skip);
 <Base title={`${page.data.title} — advox`} description={page.data.summary}>
   <div class="flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
     <SiteHeader />
-    <main class="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-8 lg:py-10">
-      <a href="/" class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg">← Înapoi</a>
+    <main class="flex-1 py-4">
+      <a href="/" class="mx-auto block max-w-[1440px] px-4 font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg wide:px-8">← Înapoi</a>
 
-      <article data-page={page.id} data-quiz={page.data.quiz} data-own data-counties={page.data.counties && JSON.stringify(page.data.counties)} data-home={ids('diaspora')} data-abroad={ids('romania')} class="mt-4 grid gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-14">
-        <div class="max-sm:-mx-4 lg:sticky lg:top-8 lg:self-start">
-          <PageCover page={page} credit class="aspect-[4/3] lg:aspect-[4/4.2]" />
-        </div>
-
-        <div class="flex flex-col gap-6">
-          <p class="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.18em] text-dim uppercase">
-            {page.data.counties && <span data-local class="text-fg">{localLabel(page.data.counties)}</span>}
-            {page.data.tags.map((t) => (t === COUNTY_TAG ? <span data-county-tag>județul tău</span> : <span>{t}</span>))}
-            <span data-count class="text-faint">{page.data.questions.length} întrebări</span>
-          </p>
-          <h1 class="font-display text-5xl leading-[0.95] font-[850] uppercase sm:text-6xl">{page.data.title}</h1>
-          <p class="text-lg text-dim">{page.data.summary}</p>
-          <a href={`/p/${page.id}/quiz`} class="press group inline-flex h-14 items-center justify-center gap-3 bg-acc px-7 font-display text-2xl font-[800] tracking-wide text-on-acc uppercase sm:self-start">
-            <span data-start-label>Răspunde</span>
-            <svg aria-hidden viewBox="0 0 20 20" class="size-5 transition-transform duration-200 ease-out [@media(hover:hover)]:group-hover:translate-x-1"><path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>
-          </a>
-
-          <section class="pt-6">
-            <h2 class="font-display text-[2rem] leading-none font-[800] uppercase">Pe scurt</h2>
-            <div class="prose mt-4 text-lg" set:html={page.html} />
-            {wiki && <a href={`/wiki/${page.data.wiki}`} class="mt-5 inline-block font-mono text-[11px] tracking-[0.18em] uppercase underline decoration-acc-fg underline-offset-4">Citește tot în wiki: {wiki} →</a>}
-          </section>
-
-          {allSources.length > 0 && (
-            <section class="pt-6">
-              <h2 class="font-display text-[2rem] leading-none font-[800] uppercase">Surse</h2>
-              <div class="prose mt-4">
-                <ol>
-                  {allSources.map((s) => (
-                    <li>
-                      {s.url ? <a href={s.url} rel="noopener">{s.title}</a> : s.title}
-                      {s.outlet && ` — ${s.outlet}`}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </section>
-          )}
-
-          {following.map((s) => (
-            <a hidden data-next href={`/p/${s.id}`} data-counties={s.data.counties && JSON.stringify(s.data.counties)} data-home={idsOf(s, 'diaspora')} data-abroad={idsOf(s, 'romania')} class="group mt-2 flex items-baseline justify-between gap-4 pt-6">
-              <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Următorul quiz</span>
-              <span class="font-display text-2xl font-[800] uppercase group-hover:underline">{s.data.title} →</span>
-            </a>
-          ))}
-        </div>
+      <article data-page={page.id} data-quiz={page.data.quiz} data-own data-counties={page.data.counties && JSON.stringify(page.data.counties)} data-home={ids('diaspora')} data-abroad={ids('romania')} class="mx-auto mt-3 flex h-[calc(100dvh-8rem)] min-h-[30rem] max-w-[1440px] flex-col wide:px-8">
+        <PageDeck page={page} title="h1" eager />
       </article>
+
+      <div class="mx-auto max-w-[1440px] px-4 wide:px-8">
+        {following.map((s) => (
+          <a hidden data-next href={`/p/${s.id}`} data-counties={s.data.counties && JSON.stringify(s.data.counties)} data-home={idsOf(s, 'diaspora')} data-abroad={idsOf(s, 'romania')} class="group mt-6 flex items-baseline justify-between gap-4">
+            <span class="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">Următorul quiz</span>
+            <span class="font-display text-2xl font-[800] uppercase group-hover:underline">{s.data.title} →</span>
+          </a>
+        ))}
+      </div>
     </main>
   </div>
 </Base>
 
 <script>
+  import { wireDecks } from '../../lib/deck';
   import { seen, wirePages } from '../../lib/page-progress';
   wirePages();
+  wireDecks();
   // The next page: the first after this one that the home page would show this reader.
   const next = [...document.querySelectorAll<HTMLElement>('[data-next]')].find((el) => seen(el));
   if (next) next.hidden = false;

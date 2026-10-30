@@ -1,0 +1,127 @@
+---
+// One of a page's cards, as Vox wrote it (pages/README.md in the redactor): its title, then its data
+// drawn by kind, then its sentence. The sources come in the slot.
+import type { Card } from '../lib/pages';
+
+interface Props {
+  card: Card;
+}
+const { card } = Astro.props;
+const rows = card.rows;
+// A value's number, for the bars: 517.100 → 517100, 6,3% → 6.3. Bars start at zero.
+const num = (v: string) => Number((v.match(/\d[\d.,]*/)?.[0] ?? '0').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+const max = Math.max(...rows.map((r) => num(r.value)), 0) || 1;
+const pct = (v: string) => `${(num(v) / max) * 100}%`;
+// A share: "38%" of 100 dots, or "2 din 5" of 5.
+const share = (v: string) => {
+  const of = v.match(/(\d+)\s*din\s*(\d+)/);
+  return of ? { on: Number(of[1]), all: Number(of[2]) } : { on: Math.round(num(v)), all: 100 };
+};
+const ems = (v: string) => [...v].reduce((w, c) => w + (/[.,: ]/.test(c) ? 0.3 : c === '%' ? 0.9 : 0.72), 0);
+const big = (v: string, max = '6rem') => `font-size: min(${max}, calc(100cqw / ${ems(v).toFixed(2)}))`;
+const first = rows[0]?.value ?? '';
+---
+
+<section class="deck-card">
+  <h3 class="deck-title">{card.title}</h3>
+
+  <div class="mt-auto flex min-h-0 flex-col gap-4 overflow-y-auto pt-4">
+    {card.kind === 'cifră' && <p class="font-display leading-[0.9] font-[850] tracking-[-0.02em] whitespace-nowrap" style={big(first)}>{first}</p>}
+
+    {card.kind === 'comparație' && (
+      <div class="flex flex-col gap-3">
+        {rows.map((r) => (
+          <div>
+            <div class="flex items-baseline justify-between gap-3 text-sm">
+              <span class="min-w-0 text-dim">{r.label}</span>
+              <span class="shrink-0 font-display text-[clamp(1.1rem,6cqw,1.5rem)] font-[850] whitespace-nowrap">{r.value}</span>
+            </div>
+            <div class="mt-1 h-3 rounded-full bg-line"><div class="deck-bar h-full rounded-full" style={`width: ${pct(r.value)}`} /></div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {card.kind === 'evoluție' && (() => {
+      // A line, not bars: its scale spans the values (with room around them), so a change of a few
+      // tenths shows. With many points, only the first, the last and the highest carry their value
+      // and date, so they don't run into each other.
+      const vs = rows.map((r) => num(r.value));
+      const lo = Math.min(...vs), hi = Math.max(...vs), pad = (hi - lo || hi || 1) * 0.5;
+      const base = Math.max(0, lo - pad), top = hi + pad * 0.6;
+      const y = (v: number) => 30 + (1 - (v - base) / (top - base)) * 90;
+      const x = (k: number) => (rows.length === 1 ? 150 : 14 + (k * 272) / (rows.length - 1));
+      const last = rows.length - 1;
+      const shown = (k: number) => rows.length <= 4 || k === 0 || k === last || k === vs.indexOf(hi);
+      const anchor = (k: number) => (rows.length > 1 && k === 0 ? 'start' : rows.length > 1 && k === last ? 'end' : 'middle');
+      const nudge = (k: number) => (anchor(k) === 'start' ? -8 : anchor(k) === 'end' ? 8 : 0);
+      return (
+        <svg viewBox="0 0 300 150" class="w-full overflow-visible" aria-hidden>
+          <polyline points={vs.map((v, k) => `${x(k)},${y(v)}`).join(' ')} fill="none" stroke="var(--fg)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+          {vs.map((v, k) => (
+            <g>
+              <circle cx={x(k)} cy={y(v)} r={k === last ? 8 : 5} fill={k === last ? 'var(--acc)' : 'var(--fg)'} stroke="var(--fg)" stroke-width="2.5" />
+              {shown(k) && <text x={x(k) + nudge(k)} y={y(v) - 14} text-anchor={anchor(k)} class="deck-chart-value">{rows[k].value}</text>}
+              {shown(k) && <text x={x(k) + nudge(k)} y={146} text-anchor={anchor(k)} class="deck-chart-label">{rows[k].label}</text>}
+            </g>
+          ))}
+        </svg>
+      );
+    })()}
+
+    {card.kind === 'parte' && (() => {
+      const s = share(first);
+      return (
+        <div class="flex items-end gap-5">
+          <div class="deck-dots" style={`--cols: ${s.all === 100 ? 10 : s.all}`}>
+            {Array.from({ length: s.all }, (_, k) => <span class:list={[k < s.on && 'on']} />)}
+          </div>
+          <p class="font-display text-[clamp(2rem,9cqw,3.5rem)] leading-[0.9] font-[850] whitespace-nowrap">{first}</p>
+        </div>
+      );
+    })()}
+
+    {card.kind === 'clasament' && (() => {
+      // The place on a line from first to last; earlier places, if any, as hollow dots.
+      const s = share(first);
+      const at = (n: number) => `${((n - 1) / Math.max(1, s.all - 1)) * 100}%`;
+      return (
+        <div>
+          <p class="text-sm text-dim">{rows[0].label}</p>
+          <p class="font-display text-[clamp(2.5rem,12cqw,4.5rem)] leading-[0.9] font-[850]">{first}</p>
+          <div class="relative mt-6 h-1 rounded-full bg-line">
+            {rows.slice(1).map((r) => (
+              <span class="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-fg bg-raised" style={`left: ${at(num(r.value))}`} title={`${r.label}: ${r.value}`} />
+            ))}
+            <span class="deck-bar absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-fg" style={`left: ${at(s.on)}`} />
+          </div>
+          <div class="mt-2 flex justify-between text-xs text-dim"><span>locul 1</span><span>locul {s.all}</span></div>
+          {rows.length > 1 && <p class="mt-2 text-sm text-dim">{rows.slice(1).map((r) => `${r.label}: locul ${num(r.value)}`).join(', ')}</p>}
+        </div>
+      );
+    })()}
+
+    {card.kind === 'cronologie' && (
+      <ol class="deck-timeline">
+        {rows.map((r) => (
+          <li><span class="text-dim text-sm">{r.label}</span><span class="font-medium">{r.value}</span></li>
+        ))}
+      </ol>
+    )}
+
+    {card.kind === 'voci' && (
+      <div class="flex flex-col gap-4">
+        {rows.map((r) => (
+          <div class="border-l-4 border-acc pl-3">
+            <p class="text-sm text-dim">{r.label}</p>
+            <p class="text-lg leading-snug font-medium">{r.value}</p>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {card.text && <p class:list={['leading-snug', card.kind === 'text' ? 'text-[clamp(1.25rem,6cqw,1.75rem)] font-medium' : 'text-lg']}>{card.text}</p>}
+  </div>
+
+  <slot />
+</section>

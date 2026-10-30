@@ -1,0 +1,146 @@
+---
+// A page as a deck of cards, read sideways: the cover, the key figure (when the cover is a photo), a
+// card for each fact with the articles it comes from, the sources, and the quiz. The page's own view
+// (pages/p/[slug].astro) and the feed (pages/index.astro) both show it; lib/deck.ts moves it. The
+// parent holds the page's data-* (lib/page-progress.ts fills in the count, the state, the start).
+import { dayOf, localLabel, questionsOf, sourcesOf, wikiTitle, type Page } from '../lib/pages';
+import { COUNTY_TAG } from '../lib/page-progress';
+import DeckCard from './DeckCard.astro';
+
+interface Props {
+  page: Page;
+  title?: 'h1' | 'h2'; // the title's heading level: h1 on its own page, h2 in the feed
+  eager?: boolean; // load the cover photo at once (the page's own view, the feed's first page)
+  href?: string; // the title links to the page's own view (in the feed)
+}
+const { page, title = 'h2', eager = false, href } = Astro.props;
+const Heading = title;
+const { image } = page.data;
+const day = dayOf(page);
+const sources = await sourcesOf(page);
+const wiki = await wikiTitle(page);
+// A wiki source as its articles: one line may name several ("A — X; B — Y. https://a ; https://b"),
+// each "Title — Outlet, date", paired with its address in order. When they can't be paired, the
+// line stays one item, with its first address.
+function articlesOf(text: string, url?: string) {
+  const urls = [...new Set([...(url ? [url] : []), ...(text.match(/https?:\/\/[^\s;]+/g) ?? [])])];
+  const plain = text.replace(/https?:\/\/[^\s;]+/g, '').replace(/[\s;.]+$/, '');
+  const parts = plain.split(/;\s+/);
+  const split = (t: string) => {
+    const cut = t.lastIndexOf(' — ');
+    return cut < 0 ? { title: t } : { title: t.slice(0, cut), outlet: t.slice(cut + 3) };
+  };
+  if (parts.length > 1 && parts.length === urls.length && parts.every((t) => t.includes(' — ')))
+    return parts.map((t, k) => ({ ...split(t), url: urls[k] }));
+  return [{ ...split(plain), url: urls[0] }];
+}
+// One list, as the wiki writes it ("Title — Publisher"): the articles, then the wiki's sources.
+const allSources = [
+  ...page.data.news,
+  ...sources.flatMap((s) => articlesOf(s.text, s.url)),
+];
+// Vox's cards, each with its articles (news); a page from the wiki has none of its own.
+const cards = page.data.cards ?? [];
+const articles = (ns: number[]) => ns.map((n) => page.data.news[n - 1]).filter(Boolean);
+---
+
+<div class="deck-wrap relative flex min-h-0 flex-1 flex-col">
+  <div data-deck tabindex="0" aria-label={`Cardurile: ${page.data.title}`} class="deck relative flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-4 outline-none wide:px-0">
+      {/* The cover: the title, over the photo or on our lime. */}
+      {image ? (
+        <section class="deck-card cover-photo relative overflow-hidden text-white">
+          <img src={image.src} alt={image.alt} loading={eager ? 'eager' : 'lazy'} decoding="async" class="absolute inset-x-0 top-0 w-full object-cover" />
+          <div aria-hidden class="cover-fade absolute inset-0" />
+          {day && <span class="absolute top-4 left-4 bg-acc px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.18em] text-on-acc uppercase">{day}</span>}
+          <span data-progress hidden class="absolute top-4 right-4 z-[2] bg-fg px-2.5 py-1 font-mono text-[11px] tracking-[0.18em] text-bg uppercase"></span>
+          <div class="relative mt-auto flex flex-col gap-3">
+            <p class="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.18em] text-white/70 uppercase">
+              {page.data.counties && <span data-local class="text-white">{localLabel(page.data.counties)}</span>}
+              {page.data.tags.map((t) => (t === COUNTY_TAG ? <span data-county-tag>județul tău</span> : <span>{t}</span>))}
+            </p>
+            <Heading class="font-display text-4xl leading-[0.95] font-[850] uppercase">{href ? <a href={href} class="hover:underline decoration-4 underline-offset-6">{page.data.title}</a> : page.data.title}</Heading>
+            <p class="text-base text-white/80">{page.data.summary}</p>
+            {page.data.quiz && (
+              <a href={`/p/${page.id}/quiz`} class="quiz-cta quiz-cta-wide press group">
+                <svg class="quiz-cta-done" viewBox="0 0 20 20" aria-hidden><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <span data-start-label>Răspunde</span>
+                <svg class="quiz-cta-arrow" viewBox="0 0 20 20" aria-hidden><path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>
+              </a>
+            )}
+            <a href={image.url} rel="noopener" class="text-[11px] text-white/60 hover:text-white">{image.illustrative && 'Imagine ilustrativă. '}Foto: {image.credit}, {image.license}</a>
+          </div>
+        </section>
+      ) : (
+        <section class="deck-card overflow-hidden" style="padding: 0; border: 0">
+          <div class="page-cover relative flex h-full flex-col p-6">
+            <div aria-hidden class="page-dots absolute inset-0" />
+            {day && <span class="absolute top-4 left-4 bg-acc px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.18em] text-on-acc uppercase">{day}</span>}
+            <span data-progress hidden class="absolute top-4 right-4 z-[2] bg-fg px-2.5 py-1 font-mono text-[11px] tracking-[0.18em] text-bg uppercase"></span>
+            <div class="relative mt-auto flex flex-col gap-3">
+              <Heading class="font-display text-4xl leading-[0.95] font-[850] uppercase">{href ? <a href={href} class="hover:underline decoration-4 underline-offset-6">{page.data.title}</a> : page.data.title}</Heading>
+              <p class="text-base opacity-80">{page.data.summary}</p>
+              {page.data.quiz && (
+                <a href={`/p/${page.id}/quiz`} class="quiz-cta quiz-cta-wide press group">
+                  <svg class="quiz-cta-done" viewBox="0 0 20 20" aria-hidden><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <span data-start-label>Răspunde</span>
+                  <svg class="quiz-cta-arrow" viewBox="0 0 20 20" aria-hidden><path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {cards.map((c) => (
+        <DeckCard card={c}>
+          {articles(c.sources).length > 0 ? (
+            <p class="deck-source">{articles(c.sources).length > 1 ? 'Surse' : 'Sursa'}: {articles(c.sources).map((a, j) => <>{j > 0 && ', '}<a href={a.url} rel="noopener">{a.outlet}</a></>)}</p>
+          ) : (
+            wiki && <p class="deck-source">Din wiki: <a href={`/wiki/${page.data.wiki}`}>{wiki}</a></p>
+          )}
+        </DeckCard>
+      ))}
+
+      {/* The sources. */}
+      {allSources.length > 0 && (
+        <section class="deck-card overflow-y-auto">
+          <h3 class="deck-title">Surse</h3>
+          <div class="prose mt-4 text-base">
+            <ol>
+              {allSources.map((s) => (
+                <li>
+                  {s.url ? <a href={s.url} rel="noopener">{s.title}</a> : s.title}
+                  {s.outlet && ` — ${s.outlet}`}
+                </li>
+              ))}
+            </ol>
+          </div>
+          {wiki && <a href={`/wiki/${page.data.wiki}`} class="mt-auto pt-4 font-mono text-[11px] tracking-[0.18em] uppercase underline decoration-acc-fg underline-offset-4">Citește tot în wiki: {wiki} →</a>}
+        </section>
+      )}
+
+      {/* The quiz. */}
+      {page.data.quiz && (
+        <section class="deck-card overflow-hidden" style="padding: 0; border: 0">
+          <div class="page-cover relative flex h-full flex-col p-6">
+            <div aria-hidden class="page-dots absolute inset-0" />
+            <h3 class="deck-title relative">Despre tine</h3>
+            <div class="relative mt-auto flex flex-col">
+              <p data-count class="font-display text-4xl leading-[0.95] font-[850] uppercase">{questionsOf(page).length} întrebări</p>
+              <p class="mt-3 text-lg">Răspunsurile sunt anonime.</p>
+              <a href={`/p/${page.id}/quiz`} class="quiz-cta press group mt-5">
+                <svg class="quiz-cta-done" viewBox="0 0 20 20" aria-hidden><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <span data-start-label>Răspunde</span>
+                <svg class="quiz-cta-arrow" viewBox="0 0 20 20" aria-hidden><path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+  </div>
+  {/* Where you are in the deck: dots, centred under the cards. On wide screens with a pointer, the
+      arrows sit over the deck's edges and show on hover (lib/deck.ts hides them at either end). */}
+  <div data-deck-dots aria-hidden class="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center gap-1.5"></div>
+  <button data-deck-prev class="deck-arrow left-2" aria-label="Cardul anterior">←</button>
+  <button data-deck-next class="deck-arrow right-2" aria-label="Cardul următor">→</button>
+</div>

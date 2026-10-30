@@ -17,7 +17,10 @@ type OwnQuestion = {
   outlook?: Record<string, number>; // evaluative questions: choice id -> -1..1 (the redactor's questions/README.md)
   where?: 'romania' | 'diaspora';
 };
-/** A page: its front matter as the redactor's pages/README.md describes it, and its facts as HTML. */
+/** A card (the redactor's pages/README.md): its kind, its data as rows, a sentence, its articles. */
+export type Card = { title: string; kind: string; rows: { label?: string; value: string }[]; text: string; sources: number[] };
+
+/** A page: its front matter as the redactor's pages/README.md describes it, and its cards' text as HTML. */
 export type Page = {
   id: string;
   html: string;
@@ -32,6 +35,7 @@ export type Page = {
     counties?: string[]; // local pages: county codes (counties.ts), DSP for the diaspora; absent: everyone
     wiki?: string;
     quiz?: string; // its quiz's id (the redactor's quizzes/<id>.md); absent: no questions
+    cards?: Card[]; // the cards Vox wrote for the page
     stat?: { value: string; label: string };
     image?: { src: string; alt: string; credit: string; license: string; url: string; illustrative: boolean };
     sources: number[];
@@ -112,3 +116,4 @@ export function localLabel(codes: string[]) {
   const names = codes.map((c) => (c === 'DSP' ? 'Diaspora' : (countyByCode(c)?.name ?? c)));
   return names.length <= 2 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
 }
+

@@ -400,8 +400,6 @@ body {
   :root:not([data-theme="light"]) .page-cover { background: var(--raised); color: var(--acc); }
 }
 :root[data-theme="dark"] .page-cover { background: var(--raised); color: var(--acc); }
-/* With a photo: white over the darkened photo on both themes (:not(#_) outranks the dark rules). */
-.page-cover.page-cover-photo:not(#_) { background: #111; color: #fff; }
 .page-card[data-state="started"] { order: -1; }
 .page-card[data-state="done"] { order: 1; }
 .tag-chip {
@@ -435,41 +433,104 @@ body {
   animation: countdown 3s linear both;
 }
 
-/* One column (phones, portrait windows): a feed card with a photo is the photo, ending above the
-   buttons' section (--band) so it sits higher, with the tags, title and summary over it in light text.
-   One fade over the whole card, drawn by the card itself (::after), is solid from the bottom up past
-   the photo's lower edge, so the buttons sit on it and the photo's edge stays under it. The key figure
-   stays off it. The text's children join the card's grid: tags, title, summary and the people line in
-   rows over the photo, the buttons in the last row. */
-@media not ((min-width: 768px) and (orientation: landscape)) {
-  .feed-photo { --band: 5.75rem; grid-template-rows: minmax(0, 1fr) repeat(4, auto) var(--band); }
-  .feed-photo > .feed-cover { grid-row: 1 / 6; grid-column: 1; }
-  .feed-photo::after {
-    content: "";
-    grid-row: 1 / 7;
-    grid-column: 1;
-    position: relative;
-    pointer-events: none;
-    background: linear-gradient(to top, #161614 calc(var(--band) + 2rem), rgb(22 22 20 / 0.88) calc(var(--band) + 4.5rem),
-      rgb(22 22 20 / 0.65) calc(var(--band) + 8rem), rgb(22 22 20 / 0.35) calc(var(--band) + 13rem),
-      rgb(22 22 20 / 0.12) calc(var(--band) + 19rem), rgb(22 22 20 / 0) calc(var(--band) + 26rem));
-  }
-  .feed-photo .cover-shade { display: none; }
-  .feed-photo > .feed-text {
-    display: contents;
-    --fg: #fff;
-    --dim: rgb(255 255 255 / 0.8);
-    --faint: rgb(255 255 255 / 0.6);
-    --line: rgb(255 255 255 / 0.4);
-    --acc-fg: #fff; /* the title's underline */
-    color: var(--fg);
-  }
-  .feed-photo > .feed-text > * { grid-column: 1; position: relative; z-index: 1; margin: 0 1.25rem 0.75rem; }
-  .feed-photo > .feed-text > :nth-child(1) { grid-row: 2; }
-  .feed-photo > .feed-text > :nth-child(2) { grid-row: 3; }
-  .feed-photo > .feed-text > :nth-child(3) { grid-row: 4; }
-  .feed-photo > .feed-text > :nth-child(4) { grid-row: 5; }
-  /* The buttons' section: 1rem + the 3.5rem buttons + 1.25rem, which is --band. */
-  .feed-photo > .feed-text > :nth-child(5) { grid-row: 6; margin: 0; padding: 1rem 1.25rem 1.25rem; }
-  .feed-photo .cover-stat { display: none; }
+/* A page as a deck of cards (components/PageDeck.astro): one card per screen on phones, scrolled
+   sideways and snapping; on wide screens the cards keep the deck's height, 3:4, side by side. The
+   deck takes its height from where it sits (its own page, a feed item). */
+.deck { scroll-padding-inline: 1rem; scrollbar-width: none; }
+.deck-card {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: calc(100vw - 2.5rem);
+  min-height: 0;
+  scroll-snap-align: center;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: var(--raised);
 }
+@media (min-width: 768px) and (orientation: landscape) {
+  /* The deck is the container its cards measure: each card is 3:4 of the deck's height. (A card's own
+     size can't come from its aspect ratio, since it is a size container itself, for its text.) */
+  .deck { scroll-padding-inline: 0; container-type: size; }
+  .deck-card { width: min(40rem, 75cqh); scroll-snap-align: start; }
+}
+/* Each card sizes its drawings to itself (cqw, cqh). */
+.deck-card { container-type: size; overflow-wrap: break-word; }
+/* The arrows: round, over the deck's edges, only on wide screens with a pointer, shown on hover. */
+.deck-arrow {
+  position: absolute;
+  top: calc(50% - 1.5rem);
+  z-index: 3;
+  display: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.deck-arrow[disabled] { visibility: hidden; }
+@media (min-width: 768px) and (orientation: landscape) and (hover: hover) {
+  .deck-arrow { display: grid; }
+  .deck-wrap:hover .deck-arrow, .deck-arrow:focus-visible { opacity: 0.85; }
+}
+/* The quiz button, under the cover's summary: "Răspunde" (or "Continuă") with an arrow, and once
+   answered our check and "Rezultat" (the page's data-state and label, lib/page-progress.ts). On a lime
+   cover it takes the cover's ink. */
+.quiz-cta {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 3.25rem;
+  padding: 0 1.4rem;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.quiz-cta svg { width: 1.25rem; height: 1.25rem; flex: none; }
+.quiz-cta-done { display: none; }
+[data-state="done"] .quiz-cta-done { display: block; }
+[data-state="done"] .quiz-cta-arrow { display: none; }
+/* On the covers: across the card, under the summary. */
+.quiz-cta-wide { align-self: stretch; justify-content: center; margin-top: 0.75rem; }
+.page-cover .quiz-cta { color: inherit; background: currentColor; } /* the cover's ink: dark on lime, lime in dark mode */
+.page-cover .quiz-cta > * { color: var(--acc); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .page-cover .quiz-cta > * { color: var(--raised); }
+}
+:root[data-theme="dark"] .page-cover .quiz-cta > * { color: var(--raised); }
+/* A photo cover: the photo ends above the button and the credit line (--band), so it sits higher, and fades into
+   the card's dark grey, solid from the bottom up past the photo's lower edge. */
+.cover-photo { --band: 7.25rem; background: #161614; }
+.cover-photo > img { bottom: var(--band); height: calc(100% - var(--band)); }
+.cover-photo :is(h1, h2) { text-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 18px rgb(0 0 0 / 0.45); }
+.cover-fade {
+  background: linear-gradient(to top, #161614 var(--band), rgb(22 22 20 / 0.9) calc(var(--band) + 3rem),
+    rgb(22 22 20 / 0.75) calc(var(--band) + 7rem), rgb(22 22 20 / 0.55) calc(var(--band) + 12rem),
+    rgb(22 22 20 / 0.35) calc(var(--band) + 17rem), rgb(22 22 20 / 0.18) calc(var(--band) + 23rem),
+    rgb(22 22 20 / 0.06) calc(var(--band) + 29rem), rgb(22 22 20 / 0) calc(var(--band) + 35rem));
+}
+/* Vox's cards (components/DeckCard.astro): a title, then the data drawn. */
+.deck-title { font-family: var(--font-display); font-weight: 850; font-size: clamp(1.4rem, 7cqw, 2.1rem); line-height: 1; text-transform: uppercase; text-wrap: balance; }
+.deck-bar { background: var(--acc); }
+.deck-chart-value { font-family: var(--font-display); font-weight: 850; font-size: 17px; fill: var(--fg); }
+.deck-chart-label { font-size: 11px; fill: var(--dim); }
+.deck-dots { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 4px; flex: 1; max-width: 13rem; }
+.deck-dots > span { aspect-ratio: 1; border-radius: 999px; background: var(--line); }
+.deck-dots > .on { background: var(--acc); }
+.deck-timeline { display: flex; flex-direction: column; gap: 0.9rem; border-left: 2px solid var(--line); padding-left: 1rem; }
+.deck-timeline > li { position: relative; display: flex; flex-direction: column; }
+.deck-timeline > li::before { content: ""; position: absolute; left: calc(-1rem - 6px); top: 0.3rem; width: 10px; height: 10px; border-radius: 999px; background: var(--acc); }
+.deck-source { margin-top: 1rem; font-size: 0.8rem; color: var(--dim); }
+.deck-source a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--faint); }
+.deck-source a:hover { color: var(--fg); text-decoration-color: var(--acc-fg); }
