@@ -102,7 +102,7 @@ export async function showPeople() {
   const name = county === 'DIASPORA' ? 'Diaspora' : countyByCode(county)?.name;
   let counts: Record<string, { ro: number; county: number }>;
   try {
-    const res = await fetch(`/api/quizzes${county ? `?county=${encodeURIComponent(county)}` : ''}`);
+    const res = await fetch(`/api/quiz${county ? `?county=${encodeURIComponent(county)}` : ''}`);
     if (!res.ok) return;
     counts = await res.json();
   } catch {

@@ -3,7 +3,7 @@ import { COUNTIES as ALL } from '../../data/counties';
 import { readJson } from '../../lib/http';
 import { QuizError } from '../../lib/quiz-server';
 import { allPages, questionsOf } from '../../lib/pages';
-import { saveQuiz, quizTally, voterOf } from '../../lib/quiz-store';
+import { quizCounts, saveQuiz, quizTally, voterOf } from '../../lib/quiz-store';
 import { setVoter, voterId } from '../../lib/voter-cookie';
 
 export const prerender = false;
@@ -16,8 +16,17 @@ const questionsBy = async (quiz: string) => {
 };
 
 // GET ?quiz=<id>&county=<code> -> { ro, county }: how the quiz was answered in the whole country and
-// in the county (null without one). Rounded, see lib/quiz-store.ts.
+// in the county (null without one). Without a quiz, ?county=<code> -> { [quiz id]: { ro, county } }:
+// how many people finished each quiz, for the home page. Rounded, see lib/quiz-store.ts.
 export const GET: APIRoute = async ({ url }) => {
+  if (!url.searchParams.has('quiz')) {
+    try {
+      return Response.json(await quizCounts(url.searchParams.get('county')), { headers: { 'Cache-Control': 'private, no-store' } });
+    } catch (e) {
+      console.error(e);
+      return Response.json({}, { status: 502 });
+    }
+  }
   const qs = await questionsBy(url.searchParams.get('quiz') ?? '');
   if (!qs) return Response.json({ error: 'Quiz necunoscut.' }, { status: 404 });
   const county = url.searchParams.get('county');
