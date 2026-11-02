@@ -74,7 +74,7 @@ const title = overall === null ? 'Rezultat — advox' : `Cum văd România: ${ov
         </p>
 
         <p class="only-mine order-4 text-sm leading-relaxed text-balance text-dim sm:text-base lg:mt-4 lg:text-lg">
-            Comparat cu <span class="hl font-display text-2xl font-[800] tracking-wide lg:text-3xl">{fmt(r.people.ro)}</span>{oameniWord(r.people.ro)} din toată țara{hasCohort && <> și <span class="hl font-display text-2xl font-[800] tracking-wide lg:text-3xl">{fmt(r.people.cohort)}</span>{oameniWord(r.people.cohort)} din {place}</>}.
+            {r.people.ro ? <>Comparat cu circa <span class="hl font-display text-2xl font-[800] tracking-wide lg:text-3xl">{fmt(r.people.ro)}</span>{oameniWord(r.people.ro)} din toată țara{hasCohort && <> și circa <span class="hl font-display text-2xl font-[800] tracking-wide lg:text-3xl">{fmt(r.people.cohort)}</span>{oameniWord(r.people.cohort)} din {place}</>}.</> : <>Încă sunt prea puțini oameni ca să te comparăm cu ei.</>}
             {left > 0 && <><br />Încă <span class="hl font-display text-2xl font-[800] tracking-wide lg:text-3xl">{fmt(left)}</span> și publicăm rezultatele.</>}
         </p>
 

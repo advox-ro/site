@@ -35,7 +35,8 @@ import Wiki from '../layouts/Wiki.astro';
       <p>
         Rezultatul tău îl vede doar cine primește linkul de la tine. În rest arătăm doar statistici: pe toată
         țara și pe județ, cu numărul de oameni rotunjit. Un grup cu mai puțin de 20 de răspunsuri nu are
-        procente.
+        procente. Cifrele unui grup se schimbă doar după ce au răspuns încă cel puțin 10 oameni din el, ca
+        nimeni să nu poată afla ce ai răspuns tu din diferența dintre ce vede înainte și după.
       </p>
 
       <h2>Ce facem cu răspunsurile</h2>
@@ -60,14 +61,14 @@ import Wiki from '../layouts/Wiki.astro';
       <h2>Cum ștergi</h2>
       <p>
         Răspunsurile la quiz-uri le ștergi cu butonul de mai jos, din browserul în care ai răspuns. Dispar
-        și din statistici.
+        și din statistici, la următoarea lor actualizare.
       </p>
       <p>
         <button id="delete-sets" type="button" class="press inline-flex h-12 items-center border border-line px-5 font-display text-base font-[700] tracking-wide uppercase hover:border-faint">Șterge răspunsurile mele</button>
         <span id="delete-sets-done" class="ml-3 text-sm text-dim" aria-live="polite"></span>
       </p>
       <p>
-        Pentru chestionarul vechi, pe pagina rezultatului tău e butonul „Șterge rezultatul”. Răspunsurile dispar, și din statistici.
+        Pentru chestionarul vechi, pe pagina rezultatului tău e butonul „Șterge rezultatul”. Răspunsurile dispar, iar din statistici la următoarea lor actualizare.
         Merge din browserul în care ai completat, cât timp cookie-ul e acolo. Fără el nu mai e nimic care să lege
         răspunsurile de tine, nici pentru noi.
       </p>

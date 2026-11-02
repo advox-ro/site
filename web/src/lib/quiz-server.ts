@@ -24,6 +24,7 @@
 // and 14/16 regular (no probes); their stored arm says which (scripts/ab-report.mjs). Nothing random ever leaves the schedule's area. Results scores use every answer.
 import { env } from 'cloudflare:workers';
 import appealScores from '../data/appeal.json';
+import { MIN_SHOWN, roundCount } from './approx-count';
 import { COHORTS } from '../data/counties';
 import { expectedArea, loadPanel, pick, pickByAppeal, posterior, type Appeal, type Panel, type SessionEvidence } from './panel';
 import { questionPool, type Pool, type PoolQuestion } from './redactor';
@@ -499,8 +500,8 @@ export async function answer(token: string, picked: string[] | null): Promise<St
 // things are going, by that answer. A person's score on an axis is the mean outlook of their answers
 // there, shown as 0–100. The comparison lines (Romania, your county) are SQL aggregates over the
 // finished sessions (store.averages): the mean outlook of their answers per area, the same
-// quantity as yours.
-const MIN_COHORT = 3; // below this many people, a cohort average says nothing
+// quantity as yours. As on the quizzes (approx-count.ts), a line needs MIN_SHOWN people and its
+// count leaves the server rounded.
 
 /** How well things are going by this answer, -1..1: the mean outlook of the picked choices.
  *  null when the question isn't evaluative or the answer was "doesn't apply". */
@@ -593,8 +594,8 @@ export async function results(session: string): Promise<Result | null> {
   // An area opens once it has a score (an answer with an outlook). The rest show locked, so the
   // open ones always form a closed shape.
   const open = me.count.map((c) => c > 0);
-  const people = { cohort: avg.people.county, ro: avg.people.ro };
-  const showCohort = people.cohort >= MIN_COHORT;
+  const showCohort = avg.people.county >= MIN_SHOWN, showRo = avg.people.ro >= MIN_SHOWN;
+  const people = { cohort: showCohort ? roundCount(avg.people.county) : 0, ro: showRo ? roundCount(avg.people.ro) : 0 };
   // Your score in an open area: the mean outlook of your answers there, what you said. Not the
   // panel's expected outlook: from a few answers its posterior barely leaves the prior (two "Deloc"
   // answers in Localitatea ta still read 54), so the score didn't reflect the answers. The lines:
@@ -608,7 +609,7 @@ export async function results(session: string): Promise<Result | null> {
     answered: me.answered[i],
     you: open[i] ? toScore(me.sum[i], me.count[i]) : null,
     cohort: showCohort ? line(avg.county, i) : null,
-    ro: line(avg.ro, i),
+    ro: showRo ? line(avg.ro, i) : null,
   }));
 
   // The big score: the mean over the areas you opened, and each line's over those same areas
@@ -621,7 +622,7 @@ export async function results(session: string): Promise<Result | null> {
   const score = {
     you: mean(mine.map((a) => a.you)),
     cohort: showCohort ? mean(mine.map((a) => a.cohort)) : null,
-    ro: mean(mine.map((a) => a.ro)),
+    ro: showRo ? mean(mine.map((a) => a.ro)) : null,
   };
 
   return { county: s.county, age: s.age, finished: s.finished, axes, people, score };
