@@ -21,7 +21,8 @@ const questionsBy = async (quiz: string) => {
 export const GET: APIRoute = async ({ url }) => {
   if (!url.searchParams.has('quiz')) {
     try {
-      return Response.json(await quizCounts(url.searchParams.get('county')), { headers: { 'Cache-Control': 'private, no-store' } });
+      const county = url.searchParams.get('county');
+      return Response.json(await quizCounts(county && COUNTIES.has(county) ? county : null), { headers: { 'Cache-Control': 'private, no-store' } });
     } catch (e) {
       console.error(e);
       return Response.json({}, { status: 502 });
@@ -59,10 +60,11 @@ export const POST: APIRoute = async ({ request, cookies, url }) => {
       if (picked === null) return [{ qid: q.id, picked: null }];
       const ids = Array.isArray(picked) ? [...new Set(picked.map(String))] : [];
       const valid = ids.length > 0 && ids.every((c) => q.choices.some((x) => x.id === c));
-      if (!valid || (q.type !== 'multi' && ids.length > 1)) throw new QuizError('Răspuns invalid.');
+      const tooMany = q.type === 'multi' ? ids.length > (q.maxSelect ?? q.choices.length) : ids.length > 1;
+      if (!valid || tooMany || (ids.includes('na') && ids.length > 1)) throw new QuizError('Răspuns invalid.');
       return [{ qid: q.id, picked: ids }];
     });
-    await saveQuiz(voter, quiz, rows);
+    if (rows.length) await saveQuiz(voter, quiz, rows);
     setVoter(cookies, url, voter.id);
     return Response.json({ ok: true });
   } catch (e) {

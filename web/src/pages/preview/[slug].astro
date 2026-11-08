@@ -1,7 +1,7 @@
 ---
-// A page the editor proposed, as it stands on its branch (?branch=page/<slug>), before it is merged:
+// A page the editor proposed, as it stands on its branch (?branch=page/<slug>&key=<key>), before it is merged:
 // every card one under another, so one picture shows them all (the redactor's preview.ts photographs
-// it for the editor). Not for readers: not indexed, not linked.
+// it for the editor, and only it has the key). Not for readers: 404 without the key.
 import Base from '../../layouts/Base.astro';
 import PageDeck from '../../components/PageDeck.astro';
 import { draftPage } from '../../lib/pages';
@@ -9,7 +9,7 @@ import { draftPage } from '../../lib/pages';
 export const prerender = false;
 
 const branch = Astro.url.searchParams.get('branch') ?? '';
-const page = branch === `page/${Astro.params.slug}` ? await draftPage(branch) : null;
+const page = branch === `page/${Astro.params.slug}` ? await draftPage(branch, Astro.url.searchParams.get('key') ?? '') : null;
 if (!page) return new Response('not found\n', { status: 404 });
 ---
 

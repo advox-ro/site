@@ -75,11 +75,11 @@ function pageOf({ slug, data, html }: Published, pool: Pool): Page {
 
 /** A page on one of the editor's branches, before it is merged (the redactor's preview.ts), with
  *  its photo from the branch too; or null. */
-export async function draftPage(branch: string): Promise<Page | null> {
-  const p = await draft(branch);
+export async function draftPage(branch: string, key: string): Promise<Page | null> {
+  const p = await draft(branch, key);
   if (!p) return null;
   const page = pageOf(p, await questionPool());
-  if (page.data.image) page.data.image.src = `/preview/photo?branch=${encodeURIComponent(branch)}`;
+  if (page.data.image) page.data.image.src = `/preview/photo?branch=${encodeURIComponent(branch)}&key=${encodeURIComponent(key)}`;
   return page;
 }
 

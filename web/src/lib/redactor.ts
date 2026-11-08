@@ -40,8 +40,8 @@ type Content = {
   wiki(): Promise<Entry<WikiEntry>[]>;
   wikiPage(slug: string): Promise<Entry<WikiPage> | null>;
   pool(): Promise<Pool>;
-  draft(branch: string): Promise<Published | null>;
-  draftPhoto(branch: string): Promise<Response | null>;
+  draft(branch: string, key: string): Promise<Published | null>;
+  draftPhoto(branch: string, key: string): Promise<Response | null>;
 };
 const redactor = () => env.REDACTOR as unknown as Content;
 
@@ -50,9 +50,10 @@ export const publishedPages = () => redactor().pages();
 /** A page's photo, by its file name, or null. */
 export const photo = (file: string) => redactor().photo(file);
 
-/** A page on one of the editor's branches (page/<slug>), before it is merged, and its photo; or null. */
-export const draft = (branch: string) => redactor().draft(branch);
-export const draftPhoto = (branch: string) => redactor().draftPhoto(branch);
+/** A page on one of the editor's branches (page/<slug>), before it is merged, and its photo; or null,
+ *  also without the branch's key, which only the redactor makes (previewkey.ts there). */
+export const draft = (branch: string, key: string) => redactor().draft(branch, key);
+export const draftPhoto = (branch: string, key: string) => redactor().draftPhoto(branch, key);
 
 const dated = <T extends Entry<WikiEntry>>(p: T) => ({ ...p, data: { ...p.data, updated: new Date(p.data.updated) } });
 

@@ -2,10 +2,10 @@
 // restricted to the EU), tables in migrations/0003_quizzes.sql. Counts leave the server
 // already rounded (approx-count.ts): a group under MIN_SHOWN gets 0 and no percentages, so an
 // exact small count is never sent. A quiz's answers are shown in batches (snapshots.ts), so the
-// difference between two looks never holds one person's answers. Server only.
+// difference between two looks holds at least BATCH people's. Server only.
 import { env } from 'cloudflare:workers';
 import { MIN_SHOWN, roundCount } from './approx-count';
-import { changed, changedWhere, snapshot } from './snapshots';
+import { changedWhere, snapshot } from './snapshots';
 import type { PageQuestion } from './pages';
 
 /** How a group answered a question. n: the people who answered it (rounded, 0 under MIN_SHOWN);
@@ -64,12 +64,21 @@ export async function deleteVoter(id: string) {
   ]);
 }
 
-/** A finished quiz's answers, in place of any sent before. picked null: skipped. */
+/** A finished quiz's answers, in place of any sent before. picked null: skipped. Moves the batch only
+ *  the first time this voter answers this quiz, and only with a real answer (snapshots.ts). */
 export async function saveQuiz(v: Voter, slug: string, answers: { qid: string; picked: string[] | null }[]) {
   const insert = db().prepare('INSERT INTO quiz_answers (voter_id, quiz_slug, qid, choices, county, age, answered_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
   await db().batch([
-    leaving(v.id, slug),
-    ...changed(groups(slug, v.county), v.id),
+    ...(answers.some((a) => a.picked)
+      ? [
+          changedWhere(
+            'SELECT g.value, ?1 FROM json_each(?2) AS g WHERE NOT EXISTS (SELECT 1 FROM quiz_answers WHERE voter_id = ?1 AND quiz_slug = ?3)',
+            v.id,
+            JSON.stringify(groups(slug, v.county)),
+            slug,
+          ),
+        ]
+      : []),
     db().prepare('DELETE FROM quiz_answers WHERE voter_id = ? AND quiz_slug = ?').bind(v.id, slug),
     ...answers.map((a) => insert.bind(v.id, slug, a.qid, a.picked && JSON.stringify(a.picked), v.county, v.age, today())),
   ]);

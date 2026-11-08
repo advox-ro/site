@@ -102,12 +102,20 @@ function expectedStatements(id: string, x: Expected) {
   ];
 }
 
-// A finished session's answers count in its county's averages and the country's: marks it as
-// changed in both. Nothing for a session still under way, which counts in no average yet.
-const changedAverages = (id: string) =>
+// A finished session leaving its county's averages and the country's: marks it as changed in both.
+// Nothing for a session still under way, which counts in no average yet.
+const leavingAverages = (id: string) =>
   changedWhere(
-    `SELECT 'avg:' || county, id FROM sessions WHERE id = ?1 AND finished_at IS NOT NULL
-     UNION SELECT 'avg:RO', id FROM sessions WHERE id = ?1 AND finished_at IS NOT NULL`,
+    `SELECT 'averages:' || county, id FROM sessions WHERE id = ?1 AND finished_at IS NOT NULL
+     UNION SELECT 'averages:RO', id FROM sessions WHERE id = ?1 AND finished_at IS NOT NULL`,
+    id,
+  );
+// A session finishing for the first time joins them: only that moves the batch, not an answer
+// changed later or a replay (snapshots.ts). Before finished_at is set.
+const joiningAverages = (id: string) =>
+  changedWhere(
+    `SELECT 'averages:' || county, id FROM sessions WHERE id = ?1 AND finished_at IS NULL
+     UNION SELECT 'averages:RO', id FROM sessions WHERE id = ?1 AND finished_at IS NULL`,
     id,
   );
 
@@ -126,7 +134,6 @@ export async function saveAnswer(id: string, a: NewAnswer, expected: Expected = 
       )
       .bind(id, a.qid, a.picked && JSON.stringify(a.picked), a.probe ? 1 : 0, a.axis, a.outlook, today(), MAX_ANSWERS),
     ...expectedStatements(id, expected),
-    changedAverages(id),
   ]);
   return r.meta.changes > 0;
 }
@@ -135,16 +142,16 @@ export async function saveAnswer(id: string, a: NewAnswer, expected: Expected = 
  *  From then on its answers and expected scores count in the averages. One transaction. */
 export async function finishSession(id: string, expected: Expected) {
   await db().batch([
+    joiningAverages(id),
     db().prepare('UPDATE sessions SET finished_at = COALESCE(finished_at, ?), pending = NULL WHERE id = ?').bind(today(), id),
     ...expectedStatements(id, expected),
-    changedAverages(id),
   ]);
 }
 
 /** Delete the session and all it holds, so it leaves the averages too. false: there was none. */
 export async function deleteSession(id: string): Promise<boolean> {
   const [, , , s] = await db().batch([
-    changedAverages(id),
+    leavingAverages(id),
     db().prepare('DELETE FROM expected WHERE session_id = ?').bind(id),
     db().prepare('DELETE FROM answers WHERE session_id = ?').bind(id),
     db().prepare('DELETE FROM sessions WHERE id = ?').bind(id),
@@ -152,27 +159,29 @@ export async function deleteSession(id: string): Promise<boolean> {
   return s.meta.changes > 0;
 }
 
-export type Averages = { ro: Totals; county: Totals; people: { ro: number; county: number } };
-type Group = { totals: Totals; people: number };
+export type Averages = { ro: Totals; county: Totals; people: { ro: number; county: number }; areaPeople: { ro: number[]; county: number[] } };
+// areaPeople: per axis, the people with an answer there.
+type Group = { totals: Totals; people: number; areaPeople: number[] };
 
 /** The comparison lines, over the finished sessions: Romania's and `county`'s (all its ages), each
  *  with how many people it has, as of their last batch. `axes`: how many axes there are. */
 export async function averages(county: string, axes: number): Promise<Averages> {
-  const [ro, here] = await Promise.all([snapshot('avg:RO', () => groupTotals(null, axes)), snapshot(`avg:${county}`, () => groupTotals(county, axes))]);
-  return { ro: ro.totals, county: here.totals, people: { ro: ro.people, county: here.people } };
+  const [ro, here] = await Promise.all([snapshot('averages:RO', () => groupTotals(null, axes)), snapshot(`averages:${county}`, () => groupTotals(county, axes))]);
+  return { ro: ro.totals, county: here.totals, people: { ro: ro.people, county: here.people }, areaPeople: { ro: ro.areaPeople, county: here.areaPeople } };
 }
 
 /** One line's totals: a county's (all ages), or the country's (county null). */
 async function groupTotals(county: string | null, axes: number): Promise<Group> {
   const finished = `s.finished_at IS NOT NULL AND (?1 IS NULL OR s.county = ?1)`;
   const [ans, exp, ppl] = await db().batch([
-    db().prepare(`SELECT a.axis, SUM(a.outlook) AS sum, COUNT(a.outlook) AS n FROM answers a JOIN sessions s ON s.id = a.session_id WHERE ${finished} AND a.outlook IS NOT NULL GROUP BY a.axis`).bind(county),
+    db().prepare(`SELECT a.axis, SUM(a.outlook) AS sum, COUNT(a.outlook) AS n, COUNT(DISTINCT a.session_id) AS who FROM answers a JOIN sessions s ON s.id = a.session_id WHERE ${finished} AND a.outlook IS NOT NULL GROUP BY a.axis`).bind(county),
     db().prepare(`SELECT e.axis, SUM(e.score) AS sum, COUNT(*) AS n FROM expected e JOIN sessions s ON s.id = e.session_id WHERE ${finished} GROUP BY e.axis`).bind(county),
     db().prepare(`SELECT COUNT(*) AS n FROM sessions s WHERE ${finished}`).bind(county),
   ]);
   const totals: Totals = { sum: Array(axes).fill(0), count: Array(axes).fill(0), esum: Array(axes).fill(0), ecount: Array(axes).fill(0) };
-  type Row = { axis: number; sum: number | null; n: number };
-  for (const r of ans.results as Row[]) if (r.axis < axes) (totals.sum[r.axis] = r.sum ?? 0), (totals.count[r.axis] = r.n);
+  const areaPeople: number[] = Array(axes).fill(0);
+  type Row = { axis: number; sum: number | null; n: number; who?: number };
+  for (const r of ans.results as Row[]) if (r.axis < axes) (totals.sum[r.axis] = r.sum ?? 0), (totals.count[r.axis] = r.n), (areaPeople[r.axis] = r.who ?? 0);
   for (const r of exp.results as Row[]) if (r.axis < axes) (totals.esum[r.axis] = r.sum ?? 0), (totals.ecount[r.axis] = r.n);
-  return { totals, people: (ppl.results[0] as { n: number }).n };
+  return { totals, people: (ppl.results[0] as { n: number }).n, areaPeople };
 }

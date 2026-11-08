@@ -601,15 +601,17 @@ export async function results(session: string): Promise<Result | null> {
   // answers in Localitatea ta still read 54), so the score didn't reflect the answers. The lines:
   // the mean outlook of everyone's answers there, the same quantity. The panel still picks the
   // questions; its expected scores are still stored (store.Totals esum) but not shown.
-  const line = (v: store.Totals, i: number) => toScore(v.sum[i], v.count[i]);
+  // A line in an area needs MIN_SHOWN people with answers in that area, not only in the group: a
+  // rarely opened area could otherwise show one person's score.
+  const line = (v: store.Totals, who: number[], i: number) => (who[i] >= MIN_SHOWN ? toScore(v.sum[i], v.count[i]) : null);
 
   const axes = AXES.map((a, i) => ({
     ...a,
     open: open[i],
     answered: me.answered[i],
     you: open[i] ? toScore(me.sum[i], me.count[i]) : null,
-    cohort: showCohort ? line(avg.county, i) : null,
-    ro: showRo ? line(avg.ro, i) : null,
+    cohort: showCohort ? line(avg.county, avg.areaPeople.county, i) : null,
+    ro: showRo ? line(avg.ro, avg.areaPeople.ro, i) : null,
   }));
 
   // The big score: the mean over the areas you opened, and each line's over those same areas
