@@ -1,5 +1,6 @@
 // Small helpers for the API routes. Server only.
-import { QuizError } from './quiz-server';
+/** What a request got wrong, in words the page can show: the route answers 400 with it. */
+export class QuizError extends Error {}
 
 // Every request body is a few short strings: a token, some ids. Anything larger isn't ours.
 const MAX_BODY = 16 * 1024;

@@ -30,7 +30,7 @@ export type PoolQuestion = {
   group?: string; // the same question in other words: at most one per quiz
   where?: 'romania' | 'diaspora'; // who can answer it: residents only, or the diaspora only (absent: anyone)
 };
-/** quiz.json: the results axes, in the order D1 stores them by; the questions; the topics to pick. */
+/** quiz.json: the question pool. */
 export type Pool = { axes: { id: string; label: string }[]; questions: Record<string, PoolQuestion>; topics: string[] };
 
 type Entry<T> = Omit<T, 'data'> & { data: Omit<WikiEntry['data'], 'updated'> & { updated: string } };

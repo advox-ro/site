@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { COUNTIES as ALL } from '../../data/counties';
-import { readJson } from '../../lib/http';
-import { QuizError } from '../../lib/quiz-server';
+import { QuizError, readJson } from '../../lib/http';
 import { allPages, questionsOf } from '../../lib/pages';
 import { quizCounts, saveQuiz, quizTally, voterOf } from '../../lib/quiz-store';
 import { setVoter, voterId } from '../../lib/voter-cookie';

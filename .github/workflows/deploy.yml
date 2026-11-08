@@ -35,9 +35,6 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
-      - name: Test the panel
-        run: node --test src/lib/panel.test.ts
-
       - run: npm run build
 
       - name: Apply database migrations

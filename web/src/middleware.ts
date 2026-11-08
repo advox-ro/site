@@ -1,4 +1,4 @@
-// Security headers on every page the Worker renders (the quiz's API, results pages). The static
+// Security headers on every page the Worker renders (the API, the pages built on request). The static
 // pages get the same ones from public/_headers: keep the two in step.
 // On a live host, a page asked for over plain HTTP is sent to HTTPS (the static pages need
 // Cloudflare's "Always Use HTTPS" for that). Only page loads: an API call is never redirected, as

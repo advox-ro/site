@@ -5,7 +5,6 @@ export type QuestionData = {
   type: 'single' | 'yesno' | 'scale' | 'multi';
   text: string;
   maxSelect?: number;
-  minSelect?: number; // the topic pick: exactly this many, and no skipping
   scale?: { minLabel: string; maxLabel: string };
   choices: { id: string; label: string }[];
 };
@@ -14,22 +13,6 @@ const optionClass = (on: boolean) =>
   `press w-full border px-4 py-3.5 text-left text-base transition-colors sm:text-lg lg:px-5 lg:py-4 ${
     on ? 'border-fg bg-fg text-bg' : 'border-line bg-raised/60 hover:border-faint'
   }`;
-
-/**
- * One question: the text left in big type on large screens, the answers right. Leaves to the left
- * once answered (busy), the next comes in from the right; give each question its own key.
- * onAnswer gets the picked choice ids, ['na'] for "doesn't apply", or null for a skip.
- */
-export default function Question({ q, busy, error, onAnswer }: { q: QuestionData; busy: boolean; error?: string | null; onAnswer: (choices: string[] | null) => void }) {
-  return (
-    <div className={`q-card ${busy ? 'q-leave' : ''} grid flex-1 content-start gap-6 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:content-center lg:items-center lg:gap-20 lg:pb-[6vh]`}>
-      <h1 className="text-2xl leading-snug font-semibold text-balance sm:text-3xl lg:text-[clamp(2.25rem,3.4vw,4rem)] lg:leading-[1.1] lg:tracking-[-0.01em]">
-        {q.text}
-      </h1>
-      <Options q={q} busy={busy} error={error} onAnswer={onAnswer} />
-    </div>
-  );
-}
 
 /**
  * A question's answers: five boxes for a scale, a list otherwise (multi: pick, then "Continuă"),
@@ -49,7 +32,6 @@ export function Options({ q, busy = false, error, selected, onAnswer, onSkip }: 
   const real = q.choices.filter((c) => c.id !== 'na');
   const multi = q.type === 'multi';
   const max = q.maxSelect ?? real.length;
-  const min = q.minSelect ?? 1;
   const toggle = (id: string) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length < max ? [...p, id] : p));
   const isOn = (id: string) => (multi ? picked : (selected ?? [])).includes(id);
@@ -77,7 +59,7 @@ export function Options({ q, busy = false, error, selected, onAnswer, onSkip }: 
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {multi && <p className="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{min === max ? `Alege ${max} · ${picked.length} / ${max}` : `Alege cel mult ${max}`}</p>}
+          {multi && <p className="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">{max === 1 ? `Alege ${max} · ${picked.length} / ${max}` : `Alege cel mult ${max}`}</p>}
           {real.map((c) => (
             <button
               key={c.id}
@@ -90,7 +72,7 @@ export function Options({ q, busy = false, error, selected, onAnswer, onSkip }: 
           ))}
           {multi && (
             <button
-              disabled={busy || picked.length < min}
+              disabled={busy || !picked.length}
               onClick={() => onAnswer(picked)}
               className="press mt-2 h-14 bg-acc font-display text-2xl font-[800] tracking-wide text-on-acc uppercase disabled:opacity-40"
             >
@@ -100,7 +82,7 @@ export function Options({ q, busy = false, error, selected, onAnswer, onSkip }: 
         </div>
       )}
 
-      {!q.minSelect && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         {na ? (
           <button disabled={busy} onClick={() => onAnswer(['na'])} className={`text-left underline-offset-4 hover:text-fg hover:underline ${isOn('na') ? 'font-semibold text-fg underline' : 'text-dim'}`}>
             {na.label}
@@ -109,7 +91,7 @@ export function Options({ q, busy = false, error, selected, onAnswer, onSkip }: 
         <button disabled={busy} onClick={() => (onSkip ? onSkip() : onAnswer(null))} className="font-mono text-[11px] tracking-[0.18em] text-dim uppercase hover:text-fg">
           Sari peste {onSkip ? '↓' : '→'}
         </button>
-      </div>}
+      </div>
 
       {error && <p className="text-sm text-acc-fg">{error}</p>}
     </div>

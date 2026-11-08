@@ -14,7 +14,7 @@
 		{ "pattern": "advox.ro", "custom_domain": true },
 		{ "pattern": "www.advox.ro", "custom_domain": true }
 	],
-	// The quiz's storage (src/lib/store.ts, migrations/). Created with --jurisdiction=eu: the data
+	// The quizzes' storage (src/lib/quiz-store.ts, migrations/). Created with --jurisdiction=eu: the data
 	// stays in the European Union. Local dev uses a local copy (.wrangler/state).
 	"d1_databases": [
 		{ "binding": "DB", "database_name": "advox", "database_id": "84652370-b963-422b-89fb-1a244e441ca9" }
@@ -23,7 +23,7 @@
 	// private connection between the two Workers (src/lib/pages.ts). Remote: under `astro dev` the
 	// site reads the deployed redactor (astro.config.mjs).
 	"services": [{ "binding": "REDACTOR", "service": "redactor", "entrypoint": "Content", "remote": true }],
-	// Sessions per IP per minute (see src/pages/api/session.ts). Counted per Cloudflare location.
+	// New voters per IP per minute (see src/pages/api/voter.ts). Counted per Cloudflare location.
 	"ratelimits": [
 		{ "name": "SESSION_LIMIT", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
 	],

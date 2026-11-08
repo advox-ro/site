@@ -5,7 +5,6 @@ interface __BaseEnv_Env {
 	DB: D1Database;
 	SESSION_LIMIT: RateLimit;
 	ASSETS: Fetcher;
-	TOKEN_SECRET: string;
 	TURNSTILE_SECRET: string;
 	REDACTOR: Service /* entrypoint Content from redactor */;
 }
@@ -17,7 +16,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "TOKEN_SECRET" | "TURNSTILE_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "TURNSTILE_SECRET">> {}
 }
 declare module "*.txt" {
 	const value: string;

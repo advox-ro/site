@@ -1,5 +1,5 @@
 // The numbers the site shows change in batches, not with every answer: a group's numbers (a quiz in
-// a county or in the whole country, the older quiz's averages) stay as they were computed until at
+// a county or in the whole country) stay as they were computed until at
 // least BATCH new people have answered or left that group, and at least MIN_GAP has passed. Live
 // numbers would let someone who knows when a person answered read that person's answer in the
 // difference; two batches differ by at least BATCH people. A person counts only when first answering:

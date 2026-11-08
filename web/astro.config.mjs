@@ -16,9 +16,9 @@ export default defineConfig({
 
   integrations: [
     react(),
-    // The built pages, without the older quiz and results. The wiki's pages are rendered on request
+    // The built pages, without the quizzes. The wiki's pages are rendered on request
     // (they come from the redactor), so they have their own sitemap (src/pages/sitemap-wiki.xml.ts).
-    sitemap({ filter: (page) => !/\/(quiz|r)(\/|$)/.test(new URL(page).pathname), customSitemaps: ['https://advox.ro/sitemap-wiki.xml'] }),
+    sitemap({ filter: (page) => !/\/quiz(\/|$)/.test(new URL(page).pathname), customSitemaps: ['https://advox.ro/sitemap-wiki.xml'] }),
   ],
 
   markdown: {

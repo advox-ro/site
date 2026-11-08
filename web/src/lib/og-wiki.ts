@@ -1,11 +1,11 @@
 // Link preview for a wiki page (/og/wiki/<slug>.png, 1200×630): the wordmark and "Wiki", the page's
 // title, Romania's dots top right. The look of the wiki index's own image (scripts/build-og.mjs),
-// drawn in the Worker like a result's preview (og-result.ts): the pages come from the redactor.
+// drawn in the Worker (og.ts): the pages come from the redactor.
 import { Resvg } from '@resvg/resvg-wasm';
 import satori from 'satori-wasm/wasm';
 import { DOTS, DOT_VIEW } from '../data/dots';
 import { ADVOX_RATIO } from './advox-logo.mjs';
-import { C, DISPLAY, H, LOGO_SRC, MONO, W, h, setup } from './og-result';
+import { C, DISPLAY, H, LOGO_SRC, MONO, W, h, setup } from './og';
 
 const PAD = 72;
 const DOT = 'rgba(18,18,16,0.2)';

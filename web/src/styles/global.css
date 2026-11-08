@@ -215,35 +215,6 @@ body {
   animation: nudge 320ms var(--ease-out);
 }
 
-.q-card {
-  transition: opacity 260ms var(--ease-out), transform 320ms var(--ease-out);
-  @starting-style {
-    opacity: 0;
-    transform: translateX(32px);
-  }
-}
-.q-card.q-leave {
-  opacity: 0;
-  transform: translateX(-32px);
-  pointer-events: none;
-  transition-duration: 180ms;
-}
-
-.leave-dialog {
-  transition: opacity 180ms var(--ease-out), transform 220ms var(--ease-out);
-  @starting-style {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-}
-.leave-dialog::backdrop {
-  background: rgb(0 0 0 / 0.45);
-  transition: opacity 180ms ease;
-  @starting-style {
-    opacity: 0;
-  }
-}
-
 .press {
   transition: transform 140ms var(--ease-out), background-color 160ms ease;
 }
@@ -258,11 +229,6 @@ body {
   }
   .nudge {
     animation: none;
-  }
-  .q-card,
-  .q-card.q-leave {
-    transform: none;
-    @starting-style { transform: none; }
   }
   .listbox {
     transition: opacity 120ms ease;
@@ -363,29 +329,6 @@ body {
 
 /* Wiki contents: the section being read, in ink and bold (set by the page's script). */
 .toc-link[aria-current] { color: var(--fg); font-weight: 700; }
-
-/* Results page: own result vs someone else's (html[data-mine] is set by the server, from the owner cookie). */
-:root[data-mine] .only-other,
-:root:not([data-mine]) .only-mine {
-  display: none;
-}
-
-/* Padlock buttons on your results wheel. */
-.lock .lock-face {
-  transition: transform 160ms var(--ease-out);
-}
-@media (hover: hover) {
-  .lock:hover .lock-face {
-    transform: scale(1.12);
-  }
-}
-.lock:active .lock-face {
-  transform: scale(0.94);
-}
-.lock:focus-visible .lock-face > rect:first-child {
-  stroke: var(--fg);
-  stroke-width: 2px;
-}
 
 /* Set covers: the key figure on lime, over the map's dot grid, fading toward the figure. Dark:
    lime figure on raised black. */

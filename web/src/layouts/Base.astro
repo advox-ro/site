@@ -14,8 +14,6 @@ interface Props {
   noindex?: boolean;
   /** Structured data (schema.org), one object or several. */
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
-  /** Your own result (results page): marks <html data-mine> for the copy and buttons only you see. */
-  mine?: boolean;
 }
 
 const {
@@ -27,7 +25,6 @@ const {
   modified,
   noindex = false,
   jsonLd,
-  mine = false,
 } = Astro.props;
 // Clean URLs, no trailing slash (build.format: 'file'), so the canonical matches what links point to.
 const path = Astro.url.pathname.replace(/(\/index)?(\.html)?\/?$/, '') || '/';
@@ -36,7 +33,7 @@ const imageUrl = new URL(image, Astro.site).href;
 ---
 
 <!doctype html>
-<html lang="ro" data-mine={mine ? '' : undefined}>
+<html lang="ro">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

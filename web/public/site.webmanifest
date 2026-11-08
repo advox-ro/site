@@ -1,7 +1,7 @@
 {
   "name": "advox",
   "short_name": "advox",
-  "description": "Un chestionar anonim despre viața în România.",
+  "description": "Quiz-uri anonime despre viața în România.",
   "lang": "ro",
   "start_url": "/",
   "display": "standalone",

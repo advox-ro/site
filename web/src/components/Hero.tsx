@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { countyByCode } from '../data/counties';
-import { QUIZ_KEY, WHERE_KEY, myResult, type MyResult } from '../lib/quiz-storage';
 import { mountTurnstile } from '../lib/turnstile-client';
 import { DOT_VIEW } from '../data/dots';
 import AgePicker, { AGE_RANGES, ageSlug, type AgeRange } from './AgePicker';
@@ -11,7 +10,6 @@ const STORAGE_KEY = 'judet';
 const AGE_KEY = 'varsta';
 
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
-const RESULT_WAIT_MS = 1200;
 
 function Readout({ code, ref }: { code: string | null; ref: React.Ref<HTMLDivElement> }) {
   return (
@@ -30,13 +28,6 @@ export default function Hero() {
   const [ageMissing, setAgeMissing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-  // A quiz started in this tab: the form gives way to a single "Continuă". One finished in this
-  // tab: "Continuă", or "Vezi rezultatul" once all its areas are done (asked from /api/me).
-  const [resume, setResume] = useState<{ n: number; total: number } | null>(null);
-  const [result, setResult] = useState<MyResult | null>(null);
-  // Which of the two to show is only known after asking the server (myResult), so the controls
-  // wait for that, then fade in.
-  const [ready, setReady] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const mapColRef = useRef<HTMLDivElement>(null);
   const readoutRef = useRef<HTMLDivElement>(null);
@@ -64,44 +55,22 @@ export default function Hero() {
   }, [W, H]);
 
   useEffect(() => {
-    let inQuiz = false;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (countyByCode(saved)) setSelected(saved);
       const savedAge = AGE_RANGES.find((r) => r === localStorage.getItem(AGE_KEY));
       if (savedAge) setAge(savedAge);
-      const step = JSON.parse(sessionStorage.getItem(QUIZ_KEY) ?? 'null');
-      if (step && !step.done) {
-        inQuiz = true;
-        setResume({ n: step.n, total: step.total });
-        const { c } = JSON.parse(sessionStorage.getItem(WHERE_KEY) ?? '{}');
-        if (countyByCode(c)) setSelected(c);
-      }
     } catch {}
-    if (inQuiz) return setReady(true);
-    // Don't hold the form back for a slow answer: past the timeout, a late result is dropped.
-    let late = false;
-    const timeout = setTimeout(() => ((late = true), setReady(true)), RESULT_WAIT_MS);
-    myResult().then((r) => {
-      if (late) return;
-      clearTimeout(timeout);
-      setResult(r);
-      setReady(true);
-    });
-    return () => clearTimeout(timeout);
   }, []);
 
-  /** Props for the i-th piece of the controls: hidden until ready, then fading in. */
-  const appear = (i: number) =>
-    ready ? { className: 'fade-in', style: { '--i': i } as React.CSSProperties } : { className: 'invisible' };
+  /** Props for the i-th piece of the controls, fading in. */
+  const appear = (i: number) => ({ className: 'fade-in', style: { '--i': i } as React.CSSProperties });
 
   // The bot check runs while the form is up, so its token is ready by the click.
-  const showForm = !resume && !result;
   useEffect(() => {
-    if (!showForm || !humanRef.current) return;
-    const t = (turnstile.current = mountTurnstile(humanRef.current, setNeedsCheck));
+    const t = (turnstile.current = mountTurnstile(humanRef.current!, setNeedsCheck));
     return () => t.remove();
-  }, [showForm]);
+  }, []);
 
   const checking = needsCheck && starting;
   const cancelCheck = () => {
@@ -219,29 +188,8 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Form, or "Continuă" when a quiz is under way in this tab */}
+      {/* Form */}
       <div className="lg:row-start-2">
-        {resume || result ? (
-          <div className="flex flex-col gap-2">
-            <p {...appear(2)}>
-              <span className="font-mono text-[11px] tracking-[0.18em] text-dim uppercase">
-                {resume ? `Chestionar început · ${resume.n} / ${resume.total - 1}` : `${result!.done} / ${result!.total} domenii completate`}
-              </span>
-            </p>
-            <div {...appear(3)}>
-            {/* A result with areas still locked: "Continuă" to it, where they unlock. */}
-            <a
-              href={resume ? '/quiz' : `/r/${result!.result}`}
-              className="press group inline-flex h-14 items-center justify-center gap-3 bg-acc px-7 font-display text-2xl font-[800] tracking-wide text-on-acc uppercase"
-            >
-              {resume || result!.done < result!.total ? 'Continuă' : 'Vezi rezultatul'}
-              <svg aria-hidden viewBox="0 0 20 20" className="size-5 transition-transform duration-200 ease-out [@media(hover:hover)]:group-hover:translate-x-1">
-                <path d="M3 10h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" />
-              </svg>
-            </a>
-            </div>
-          </div>
-        ) : (
         <form onSubmit={start} className="flex flex-col gap-2">
           {/* Honeypot: off-screen and skipped by keyboard and screen readers, so only bots fill it in. */}
           <input
@@ -284,7 +232,6 @@ export default function Hero() {
           </div>
           {startError && <p className="font-mono text-[11px] tracking-[0.12em] text-acc-fg uppercase">{startError}</p>}
         </form>
-        )}
       </div>
     </div>
   );
