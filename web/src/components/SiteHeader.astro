@@ -1,7 +1,7 @@
 ---
 // Shared by every page so the header never shifts between the landing page and the wiki: the logo,
-// what the page puts in the middle (the feed's search), and a menu with the links, where you said
-// you live and the theme.
+// what the page puts in the middle (the feed's search), the theme, and a menu with the links and
+// where you said you live.
 import ThemeToggle from './ThemeToggle.astro';
 import Logo from './Logo.astro';
 
@@ -15,7 +15,8 @@ const links = [
 <header class="relative mx-auto flex w-full max-w-[1440px] items-center gap-3 px-4 pt-4 sm:gap-5 sm:px-8 sm:pt-6">
   <a href="/" class="-my-1 block shrink-0"><Logo class="block h-8 w-auto min-[400px]:h-9 sm:h-10" /></a>
   <div class="min-w-0 flex-1"><slot name="search" /></div>
-  <details class="site-menu relative shrink-0">
+  <ThemeToggle />
+  <details class="site-menu relative -ml-3 shrink-0 sm:-ml-5">
     <summary class="press grid size-10 cursor-pointer list-none place-items-center text-dim hover:text-fg" aria-label="Meniu">
       <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
     </summary>
@@ -24,10 +25,6 @@ const links = [
       {links.map((l) => (
         <a href={l.href} aria-current={l.on ? 'page' : undefined} class:list={['px-4 py-2.5 text-[13px] font-semibold tracking-[0.06em] uppercase hover:text-fg', l.on ? 'text-fg' : 'text-dim']}>{l.label}</a>
       ))}
-      <div class="flex items-center justify-between py-0.5 pr-4 pl-4">
-        <span class="text-[13px] font-semibold tracking-[0.06em] text-dim uppercase">Tema</span>
-        <ThemeToggle />
-      </div>
     </nav>
   </details>
 </header>
