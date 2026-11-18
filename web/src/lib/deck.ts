@@ -1,17 +1,34 @@
-// Moves every page deck on the screen (components/PageDeck.astro): a dot per card, darker the more of
-// it is on screen; the arrows (hidden at either end) and the Left and Right keys move a card at a time. The keys move the deck in
-// view, so in the feed Up and Down go from page to page and Left and Right through the page's cards.
-export function wireDecks() {
+// Moves the page decks (components/PageDeck.astro): a dot per card, darker the more of it is on
+// screen; the arrows (hidden at either end) and the Left and Right keys move a card at a time. The keys
+// move the deck in view, so in the feed Up and Down go from page to page and Left and Right through
+// the page's cards. The feed mounts a page's deck only near the screen (pages/index.astro), so each
+// call wires the decks under `root` and returns what unwires them.
+const moves = new Map<HTMLElement, (d: number) => void>();
+let inView: HTMLElement | null = null;
+let watch: IntersectionObserver | undefined;
+
+function keys(e: KeyboardEvent) {
+  if (e.altKey || e.ctrlKey || e.metaKey || (e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return;
+  const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+  const go = d && inView && moves.get(inView);
+  if (go) (e.preventDefault(), go(d));
+}
+
+export function wireDecks(root: Document | Element = document): () => void {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const moves = new Map<HTMLElement, (d: number) => void>();
-  let inView: HTMLElement | null = null;
-  const watch = new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) if (e.isIntersecting) inView = e.target as HTMLElement;
-    },
-    { threshold: 0.5 },
-  );
-  for (const deck of document.querySelectorAll<HTMLElement>('[data-deck]')) {
+  if (!watch) {
+    watch = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) inView = e.target as HTMLElement;
+      },
+      { threshold: 0.5 },
+    );
+    document.addEventListener('keydown', keys);
+  }
+  const undo: (() => void)[] = [];
+  for (const deck of root.querySelectorAll<HTMLElement>('[data-deck]')) {
+    const off = new AbortController();
+    const on = { signal: off.signal };
     const wrap = deck.parentElement!;
     const cards = [...deck.querySelectorAll<HTMLElement>('.deck-card')];
     const dots = wrap.querySelector<HTMLElement>('[data-deck-dots]')!;
@@ -51,8 +68,9 @@ export function wireDecks() {
       });
     };
     let frame = 0;
-    deck.addEventListener('scroll', () => (cancelAnimationFrame(frame), (frame = requestAnimationFrame(shade))), { passive: true });
-    new ResizeObserver(shade).observe(deck);
+    deck.addEventListener('scroll', () => (cancelAnimationFrame(frame), (frame = requestAnimationFrame(shade))), { passive: true, ...on });
+    const resize = new ResizeObserver(shade);
+    resize.observe(deck);
     // Within the deck only: scrollIntoView would also move the feed around it. The card goes where it
     // snaps (centered on phones, at the start on wide screens), or the snap pulls the deck back.
     const go = (d: number) => {
@@ -61,17 +79,21 @@ export function wireDecks() {
       const left = card.offsetLeft - (centered ? (deck.clientWidth - card.offsetWidth) / 2 : 0);
       deck.scrollTo({ left, behavior: reduce ? 'auto' : 'smooth' });
     };
-    prev.addEventListener('click', () => go(-1));
-    next.addEventListener('click', () => go(1));
+    prev.addEventListener('click', () => go(-1), on);
+    next.addEventListener('click', () => go(1), on);
     moves.set(deck, go);
     watch.observe(deck);
     inView ??= deck;
     show();
+    undo.push(() => {
+      off.abort();
+      io.disconnect();
+      resize.disconnect();
+      cancelAnimationFrame(frame);
+      watch!.unobserve(deck);
+      moves.delete(deck);
+      if (inView === deck) inView = null;
+    });
   }
-  document.addEventListener('keydown', (e) => {
-    if (e.altKey || e.ctrlKey || e.metaKey || (e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return;
-    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-    const go = d && inView && moves.get(inView);
-    if (go) (e.preventDefault(), go(d));
-  });
+  return () => undo.forEach((f) => f());
 }

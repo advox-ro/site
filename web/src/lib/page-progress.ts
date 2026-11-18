@@ -59,13 +59,15 @@ export function seen(el: HTMLElement, abroad = livesAbroad(), here = region()): 
   return !(counties && !(here && counties.includes(here))) && ids.length >= 3;
 }
 
-export function wirePages() {
+export function wirePages(root: Document | Element = document) {
   const abroad = livesAbroad();
   const here = region();
   // "județ" tags and a local page's counties read as the reader's county, once it is known.
   const name = here === 'DSP' ? 'Diaspora' : countyByCode(here)?.name;
-  if (name) for (const n of document.querySelectorAll('[data-county-tag]')) n.textContent = name;
-  for (const el of document.querySelectorAll<HTMLElement>('[data-page]')) {
+  if (name) for (const n of root.querySelectorAll('[data-county-tag]')) n.textContent = name;
+  // `root` may be one page: the feed fills a page's deck when it mounts it (pages/index.astro).
+  const pages = root instanceof HTMLElement && root.matches('[data-page]') ? [root] : root.querySelectorAll<HTMLElement>('[data-page]');
+  for (const el of pages) {
     const slug = el.dataset.page!;
     const ids: string[] = JSON.parse(el.dataset[abroad ? 'abroad' : 'home'] ?? '[]');
     const counties: string[] | null = el.dataset.counties ? JSON.parse(el.dataset.counties) : null;

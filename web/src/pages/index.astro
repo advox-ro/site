@@ -51,7 +51,9 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
     </SiteHeader>
 
     {/* The feed: one page per screen, snapping like a reel, each page a deck of cards read sideways
-        (components/PageDeck.astro). 100cqh: the feed's height. */}
+        (components/PageDeck.astro). 100cqh: the feed's height. A page's deck waits in its template
+        and is drawn only near the screen (the script below): all of them at once is more than a
+        phone's browser holds. */}
     <main id="feed" class="mt-2 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain [container-type:size] wide:mt-4">
       <div class="mx-auto flex w-full max-w-[1440px] flex-col wide:px-8">
         {pages.map((page, n) => (
@@ -65,7 +67,7 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
             data-counties={page.data.counties && JSON.stringify(page.data.counties)}
             class="page-card flex h-[100cqh] min-h-[30rem] snap-start snap-always flex-col py-3 wide:h-[100cqh] wide:pb-6"
           >
-            <PageDeck page={page} href={`/p/${page.id}`} eager={n === 0} />
+            <template><PageDeck page={page} href={`/p/${page.id}`} eager={n === 0} /></template>
           </article>
         ))}
         <p class="snap-end pt-6 pb-10 wide:pt-0 text-center font-mono text-[11px] tracking-[0.18em] text-faint uppercase">Ai ajuns la capăt</p>
@@ -76,16 +78,36 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
 
 <script>
   import { wireDecks } from '../lib/deck';
-  import { wirePages, showPeople } from '../lib/page-progress';
+  import { wirePages, showPeople, COUNTY_TAG } from '../lib/page-progress';
 
   wirePages();
-  wireDecks();
   showPeople();
+
+  // A page's deck is drawn when the page comes within a screen of the feed's view, and taken down
+  // again past three screens, so only a few are drawn at a time. The page itself, with its data and
+  // its height, stays, so the scroll, the order and the search don't change.
+  const feed = document.getElementById('feed')!;
+  const drawn = new Map<HTMLElement, () => void>();
+  const draw = (page: HTMLElement) => {
+    if (drawn.has(page)) return;
+    page.appendChild(page.querySelector('template')!.content.cloneNode(true));
+    wirePages(page);
+    drawn.set(page, wireDecks(page));
+  };
+  const clear = (page: HTMLElement) => {
+    const unwire = drawn.get(page);
+    if (!unwire) return;
+    unwire();
+    drawn.delete(page);
+    for (const n of [...page.children]) if (n.tagName !== 'TEMPLATE') n.remove();
+  };
+  const near = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && draw(e.target as HTMLElement)), { root: feed, rootMargin: '100% 0px' });
+  const far = new IntersectionObserver((es) => es.forEach((e) => !e.isIntersecting && clear(e.target as HTMLElement)), { root: feed, rootMargin: '300% 0px' });
+  for (const page of document.querySelectorAll<HTMLElement>('.page-card')) near.observe(page), far.observe(page);
 
   // Up and Down (and Space, Shift+Space; Page Down, Page Up) go a page at a time, wherever the focus
   // is; Left and Right move the page's cards (deck.ts). The page in view is the one whose top is
   // nearest the feed's; pressed again while scrolling, it goes on from the page it is heading to.
-  const feed = document.getElementById('feed')!;
   let heading: { to: number; until: number } | null = null;
   document.addEventListener('keydown', (e) => {
     const on = e.target as HTMLElement;
@@ -114,7 +136,9 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
   const filter = () => {
     const words = plain(search.value).split(/\s+/).filter(Boolean);
     for (const card of document.querySelectorAll<HTMLElement>('.page-card')) {
-      const text = plain(card.dataset.search! + ' ' + (card.querySelector('[data-county-tag]')?.textContent ?? ''));
+      // A page tagged with the reader's county is found by the county's name too (the topic's chip has it).
+      const county = card.dataset.tags!.includes(JSON.stringify(COUNTY_TAG)) ? (topics.querySelector('[data-county-tag]')?.textContent ?? '') : '';
+      const text = plain(card.dataset.search! + ' ' + county);
       card.classList.toggle('hidden', !words.every((w) => text.includes(w)));
     }
     feed.scrollTo({ top: 0 });
