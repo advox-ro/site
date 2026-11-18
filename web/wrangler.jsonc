@@ -23,6 +23,8 @@
 	// private connection between the two Workers (src/lib/pages.ts). Remote: under `astro dev` the
 	// site reads the deployed redactor (astro.config.mjs).
 	"services": [{ "binding": "REDACTOR", "service": "redactor", "entrypoint": "Content", "remote": true }],
+	// Shrinks the pages' photos to the width a phone shows them at (pages/photos/[file].ts).
+	"images": { "binding": "PHOTOS" },
 	// New voters per IP per minute (see src/pages/api/voter.ts). Counted per Cloudflare location.
 	"ratelimits": [
 		{ "name": "SESSION_LIMIT", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }

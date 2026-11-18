@@ -67,7 +67,7 @@ Boundaries © EuroGeographics: the credit under the map on `/welcome` is require
 
 ## Deployment
 
-Cloudflare Worker `advox`, serving `advox.ro` and `www.advox.ro` (custom domains in `web/wrangler.jsonc`). It reads its content from the redactor's Worker (`redactor`) through the `REDACTOR` service binding, so a change there that the site needs (a new method on its `Content` entrypoint) is deployed there first.
+Cloudflare Worker `advox`, serving `advox.ro` and `www.advox.ro` (custom domains in `web/wrangler.jsonc`). It reads its content from the redactor's Worker (`redactor`) through the `REDACTOR` service binding, so a change there that the site needs (a new method on its `Content` entrypoint) is deployed there first. The pages' photos are shrunk to 1200 pixels wide through the `PHOTOS` Images binding and kept in Cloudflare's cache (`web/src/pages/photos/[file].ts`).
 
 Security headers (HSTS, a report-only Content Security Policy, no framing) come from `web/public/_headers` for the static pages and `web/src/middleware.ts` for the rest.
 
