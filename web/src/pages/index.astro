@@ -56,7 +56,7 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
         phone's browser holds. */}
     <main id="feed" class="mt-2 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain [container-type:size] wide:mt-4">
       <div class="mx-auto flex w-full max-w-[1440px] flex-col wide:px-8">
-        {pages.map((page, n) => (
+        {pages.map((page) => (
           <article
             data-page={page.id}
             data-quiz={page.data.quiz}
@@ -67,7 +67,7 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
             data-counties={page.data.counties && JSON.stringify(page.data.counties)}
             class="page-card flex h-[100cqh] min-h-[30rem] snap-start snap-always flex-col py-3 wide:h-[100cqh] wide:pb-6"
           >
-            <template><PageDeck page={page} href={`/p/${page.id}`} eager={n === 0} /></template>
+            <template><PageDeck page={page} href={`/p/${page.id}`} eager /></template>
           </article>
         ))}
         <p class="snap-end pt-6 pb-10 wide:pt-0 text-center font-mono text-[11px] tracking-[0.18em] text-faint uppercase">Ai ajuns la capăt</p>
@@ -83,8 +83,9 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
   wirePages();
   showPeople();
 
-  // A page's deck is drawn when the page comes within a screen of the feed's view, and taken down
-  // again past three screens, so only a few are drawn at a time. The page itself, with its data and
+  // A page's deck is drawn when the page comes within two screens of the feed's view, and taken
+  // down again past four, so only a few are drawn at a time. A drawn deck loads its photo at once
+  // (eager), so it is there before the page scrolls in. The page itself, with its data and
   // its height, stays, so the scroll, the order and the search don't change.
   const feed = document.getElementById('feed')!;
   const drawn = new Map<HTMLElement, () => void>();
@@ -101,8 +102,8 @@ const ids = (s: (typeof pages)[number], skip: string) => JSON.stringify(question
     drawn.delete(page);
     for (const n of [...page.children]) if (n.tagName !== 'TEMPLATE') n.remove();
   };
-  const near = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && draw(e.target as HTMLElement)), { root: feed, rootMargin: '100% 0px' });
-  const far = new IntersectionObserver((es) => es.forEach((e) => !e.isIntersecting && clear(e.target as HTMLElement)), { root: feed, rootMargin: '300% 0px' });
+  const near = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && draw(e.target as HTMLElement)), { root: feed, rootMargin: '200% 0px' });
+  const far = new IntersectionObserver((es) => es.forEach((e) => !e.isIntersecting && clear(e.target as HTMLElement)), { root: feed, rootMargin: '400% 0px' });
   for (const page of document.querySelectorAll<HTMLElement>('.page-card')) near.observe(page), far.observe(page);
 
   // Up and Down (and Space, Shift+Space; Page Down, Page Up) go a page at a time, wherever the focus
